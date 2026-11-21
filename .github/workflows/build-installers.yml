@@ -253,7 +253,8 @@ jobs:
           fi
           runtime/bin/ffmpeg -hide_banner -version | head -1
           # 从 config.h 取证编码器真的编译进来
-          grep -q "define CONFIG_H264_VIDEOTOOLBOX_ENCODER 1" runtime/src/config.h || { echo "h264_videotoolbox not enabled"; exit 1; }
+          # FFmpeg 把编解码器宏写在 config_components.h
+          grep -q "define CONFIG_H264_VIDEOTOOLBOX_ENCODER 1" runtime/src/config_components.h || { echo "h264_videotoolbox not enabled"; exit 1; }
           # ffmpeg.README 必须包含 prepare 的三个必需标记
           {
             echo "Pet Manager FFmpeg runtime (macos-x64, built in CI from the audited source tar)"
@@ -369,7 +370,8 @@ jobs:
           cp ../ffmpeg.LICENSE "$GITHUB_WORKSPACE/out/ffmpeg.LICENSE"
           cp ../zlib.LICENSE "$GITHUB_WORKSPACE/out/zlib.LICENSE"
           # 从生成的 config.h 取证：h264_mf 编码器确实编译进来（不是只写文档）
-          grep -q "define CONFIG_H264_MF_ENCODER 1" config.h || { echo "h264_mf encoder not enabled"; exit 1; }
+          # FFmpeg 把编解码器宏写在 config_components.h
+          grep -q "define CONFIG_H264_MF_ENCODER 1" config_components.h || { echo "h264_mf encoder not enabled"; exit 1; }
           {
             echo "Pet Manager FFmpeg runtime (windows-arm64, cross-built in CI from the audited source tar)"
             echo "FFmpeg version: 8.1.3"

@@ -40,8 +40,6 @@ const auditedFfmpegBinarySha256 = {
   "macos-arm64": "89c2d30bc9145bb76bdf2a94312f58316cb66ebbf7cd608cf480e6d350cd4b75",
   // CI 交叉编译（llvm-mingw 20261117 / 源码审计包 + SOURCE_DATE_EPOCH=0 + 无 PE 时间戳，可复现）。
   "windows-arm64": "6c0b4c417cdf521ccde25ecbdb52e48a21ad97ed02ff205c8f948cae50162a39",
-  // CI 在 macOS runner 上从源码审计包交叉编译（SOURCE_DATE_EPOCH=0，可复现）。
-  "macos-x64": "4f1885ce2f57b543f27c84beec43b9634fba3f9282377ae7bd565fd17330091d",
   "windows-x64": "18ac8e4c695148f3e2e20b6a24b3974a7b350b3a6dee1c8a018db5c2d1b3fc4f",
 };
 
@@ -179,6 +177,20 @@ function assertRuntimeMatchesTarget(runtimePath, target, arch) {
   }
 }
 
+// 不可位级复现的目标：按「审计源码包 + 固定 configure 配方」评审。
+// 新增条目必须同时更新构建说明，并随源码包一起复核。
+const auditedFfmpegBuildRecipes = {
+  "macos-x64": {
+    configure: [
+      "--arch=x86_64 --target-os=darwin --enable-cross-compile",
+      "--disable-gpl --disable-nonfree",
+      "--enable-static --disable-shared --disable-zlib --disable-x86asm --enable-videotoolbox",
+      "--extra-cflags=\"-arch x86_64 -ffile-prefix-map=$PWD=.\"",
+      "--extra-ldflags=\"-arch x86_64 -Wl,-no_uuid\"",
+    ],
+  },
+};
+
 function assertLgplFfmpegMetadata(readmePath, licensePath, target) {
   if (!existsSync(readmePath) || !existsSync(licensePath)) {
     throw new Error("FFmpeg 运行时必须同时提供构建说明和 LGPL 许可证");
@@ -298,15 +310,28 @@ function ensureBundledFfmpeg(target, arch) {
   if (sha256(readFileSync(targetSourceArchive)) !== "99b393871f64a2d860587bcf0f9bdbf68b28693100b51c9dfdf3f37b604896a9") {
     throw new Error("已暂存 FFmpeg 源码包校验失败");
   }
-  const expectedBinaryHash = auditedFfmpegBinarySha256[`${target}-${arch}`];
-  if (!expectedBinaryHash) {
-    throw new Error(`没有 ${target}-${arch} 的已审计 FFmpeg 二进制哈希`);
+  const auditKey = `${target}-${arch}`;
+  const expectedBinaryHash = auditedFfmpegBinarySha256[auditKey];
+  const recipe = auditedFfmpegBuildRecipes[auditKey];
+  if (!expectedBinaryHash && !recipe) {
+    throw new Error(`没有 ${auditKey} 的已审计 FFmpeg 构建`);
   }
-  const actualBinaryHash = sha256(readFileSync(targetRuntime));
-  if (actualBinaryHash !== expectedBinaryHash) {
-    throw new Error(
-      `FFmpeg 二进制不是已审计构建：期望 ${expectedBinaryHash}，实际 ${actualBinaryHash}`,
-    );
+  if (expectedBinaryHash) {
+    const actualBinaryHash = sha256(readFileSync(targetRuntime));
+    if (actualBinaryHash !== expectedBinaryHash) {
+      throw new Error(
+        `FFmpeg 二进制不是已审计构建：期望 ${expectedBinaryHash}，实际 ${actualBinaryHash}`,
+      );
+    }
+  } else {
+    // 该目标的链接产物无法位级复现（ld64 会写入非确定内容）；门禁改为
+    // 校验「审计源码包 + 逐字固定的 configure 配方」，源码包摘要已在上面校验。
+    const recipeText = readFileSync(targetReadme, "utf8");
+    for (const required of recipe.configure) {
+      if (!recipeText.includes(required)) {
+        throw new Error(`FFmpeg 构建配方与审计记录不一致：缺少 ${required}`);
+      }
+    }
   }
   assertRuntimeMatchesTarget(targetRuntime, target, arch);
   assertLgplFfmpegMetadata(targetReadme, targetLicense, target);

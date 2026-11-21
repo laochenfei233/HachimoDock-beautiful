@@ -439,6 +439,8 @@ jobs:
             "PET_MANAGER_NODE_BIN=$env:GITHUB_WORKSPACE\runtime\node.exe"
             "PET_MANAGER_TARGET_ARCH=arm64"
           } >> $env:GITHUB_ENV
+          # prepare 对 terrier-clips 调 PATH 上的 ffmpeg 做时长探测（追加语义走 GITHUB_PATH）
+          "$env:GITHUB_WORKSPACE\runtime" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: npm ci (client)
         working-directory: pc

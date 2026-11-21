@@ -39,9 +39,9 @@ const p4Profiles = readFileSync(join(repositoryRoot, "firmware", "platformio.ini
 const auditedFfmpegBinarySha256 = {
   "macos-arm64": "89c2d30bc9145bb76bdf2a94312f58316cb66ebbf7cd608cf480e6d350cd4b75",
   // CI 交叉编译（llvm-mingw 20261117 / 源码审计包 + SOURCE_DATE_EPOCH=0 + 无 PE 时间戳，可复现）。
-  "windows-arm64": "1e35bd230048a65fc681744948cc34acb96d6e75e64e394820a7620456d8f0a4",
+  "windows-arm64": "6c0b4c417cdf521ccde25ecbdb52e48a21ad97ed02ff205c8f948cae50162a39",
   // CI 在 macOS runner 上从源码审计包交叉编译（SOURCE_DATE_EPOCH=0，可复现）。
-  "macos-x64": "0fd43674bd8d4ce66643d424c5dd923d850ebbb0824d478f485524a2fbce39b8",
+  "macos-x64": "4f1885ce2f57b543f27c84beec43b9634fba3f9282377ae7bd565fd17330091d",
   "windows-x64": "18ac8e4c695148f3e2e20b6a24b3974a7b350b3a6dee1c8a018db5c2d1b3fc4f",
 };
 

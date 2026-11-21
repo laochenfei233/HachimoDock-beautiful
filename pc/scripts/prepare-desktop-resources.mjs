@@ -37,7 +37,7 @@ const generatedRuntime = join(tauriRoot, "generated-runtime");
 const bundledP4FirmwareDir = join(tauriRoot, "firmware", "esp32-p4");
 const p4Profiles = readFileSync(join(repositoryRoot, "firmware", "platformio.ini"), "utf8");
 const auditedFfmpegBinarySha256 = {
-  "macos-arm64": "ec8356f02a301258f9c4737ef3ab034259f4ff9031c905271e07892fa8bdf7c5",
+  "macos-arm64": "89c2d30bc9145bb76bdf2a94312f58316cb66ebbf7cd608cf480e6d350cd4b75",
   "windows-x64": "18ac8e4c695148f3e2e20b6a24b3974a7b350b3a6dee1c8a018db5c2d1b3fc4f",
 };
 
@@ -83,8 +83,8 @@ function requestedArch(target, platform, arch) {
       `无法确定 ${target} 目标架构；请设置 PET_MANAGER_TARGET_ARCH=x64|arm64`,
     );
   }
-  if (target === "windows" && normalized !== "x64") {
-    throw new Error("Pet Manager Windows 安装包当前只支持 x64");
+  if (target === "windows" && normalized !== "x64" && normalized !== "arm64") {
+    throw new Error("Pet Manager Windows 安装包当前只支持 x64 或 arm64");
   }
   return normalized;
 }

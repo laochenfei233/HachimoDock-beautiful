@@ -89,7 +89,7 @@ fn token_path(provider: &str) -> Result<PathBuf, String> {
 }
 
 #[cfg(not(windows))]
-fn load_key(provider: &str) -> Result<Option<String>, String> {
+pub(crate) fn load_key(provider: &str) -> Result<Option<String>, String> {
     match std::fs::read(token_path(provider)?) {
         Ok(bytes) if bytes.len() <= 8192 => Ok(Some(String::from_utf8(bytes).map_err(|_| "凭据损坏".to_string())?)),
         Ok(_) => Err("凭据文件过大".to_string()),
@@ -103,7 +103,8 @@ fn store_key(provider: &str, value: Option<&str>) -> Result<(), String> {
     match value {
         Some(value) => std::fs::write(token_path(provider)?, value).map_err(|_| "无法保存凭据".to_string()),
         None => match std::fs::remove_file(token_path(provider)?) {
-            Ok(()) | Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(_) => Err("无法删除凭据".to_string()),
         },
     }

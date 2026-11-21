@@ -185,7 +185,8 @@ const auditedFfmpegBuildRecipes = {
       "--arch=x86_64 --target-os=darwin --enable-cross-compile",
       "--disable-gpl --disable-nonfree",
       "--enable-static --disable-shared --disable-zlib --disable-x86asm --enable-videotoolbox",
-      "--extra-cflags=\"-arch x86_64 -ffile-prefix-map=$PWD=.\"",
+      // README 里的 $PWD 已被 shell 展开为绝对路径，只比对前缀
+      "--extra-cflags=\"-arch x86_64 -ffile-prefix-map=",
       "--extra-ldflags=\"-arch x86_64 -Wl,-no_uuid\"",
     ],
   },

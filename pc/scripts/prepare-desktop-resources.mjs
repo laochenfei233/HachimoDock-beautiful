@@ -339,7 +339,9 @@ function ensureBundledFfmpeg(target, arch) {
   if (target === "windows") assertWindowsFfmpegIsStandalone(targetRuntime);
   if (target !== "windows") chmodSync(targetRuntime, 0o755);
 
-  if (target === hostTarget(process.platform)) {
+  // 配方审计目标是交叉构建（如 arm64 主机上的 macos-x64），无法在当前主机原生执行；
+  // 其编码器与 LGPL 证据由固定的 configure 配方 + 构建脚本中的 config_components.h 校验承担。
+  if (target === hostTarget(process.platform) && !auditedFfmpegBuildRecipes[auditKey]) {
     const version = spawnSync(targetRuntime, ["-hide_banner", "-version"], {
       encoding: "utf8",
       timeout: 10_000,

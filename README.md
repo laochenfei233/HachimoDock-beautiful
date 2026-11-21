@@ -75,7 +75,7 @@ flowchart LR
 | macOS arm64 | 可构建 | DMG（ad-hoc 签名，未公证）。运行时取自官方 v0.1.245 dmg |
 | macOS x64 | 可构建 | DMG。FFmpeg 在 macOS runner 上从审计源码包交叉编译（VideoToolbox），Node 取官方 darwin-x64 分发（SHASUMS 校验） |
 
-审计门禁分两种形态： 与  固定二进制 SHA-256； 因 ld64 输出不可位级复现，改为「审计源码包 + 逐字固定的 configure 配方」评审。macOS 安装包为 ad-hoc 签名且未公证，首次打开需在系统设置中放行。
+审计门禁分两种形态：`windows-x64` 与 `windows-arm64` 固定二进制 SHA-256；`macos-x64` 因 ld64 输出不可位级复现，改为「审计源码包 + 逐字固定的 configure 配方」评审。macOS 安装包为 ad-hoc 签名且未公证，首次打开需在系统设置中放行。
 
 ## 相对上游的改动
 

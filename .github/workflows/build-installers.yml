@@ -288,6 +288,9 @@ jobs:
         working-directory: pc/src-tauri/bridge/packages/clawd-backend-service
         run: npm ci
 
+      - name: Add the x64 Rust target
+        run: rustup target add x86_64-apple-darwin
+
       - name: Build (prepare:desktop + tauri build app,dmg for x64)
         working-directory: pc
         env:

@@ -38,6 +38,8 @@ const bundledP4FirmwareDir = join(tauriRoot, "firmware", "esp32-p4");
 const p4Profiles = readFileSync(join(repositoryRoot, "firmware", "platformio.ini"), "utf8");
 const auditedFfmpegBinarySha256 = {
   "macos-arm64": "89c2d30bc9145bb76bdf2a94312f58316cb66ebbf7cd608cf480e6d350cd4b75",
+  // CI 用 llvm-mingw 20261117 从审计源码包交叉编译（见 .github/workflows/build-installers.yml）。
+  "windows-arm64": "b5a157c9a2c794e95b3a3f8ee42680b319ff0f839d2b0a7a4f740c90b8743a35",
   "windows-x64": "18ac8e4c695148f3e2e20b6a24b3974a7b350b3a6dee1c8a018db5c2d1b3fc4f",
 };
 

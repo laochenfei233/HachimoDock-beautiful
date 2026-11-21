@@ -238,9 +238,9 @@ jobs:
           make install
           cd ../..
           mkdir -p runtime/bin
-          # set -e 下多路径 ls 的缺失会中止，逐个探测
-          BIN=src/dist/bin/ffmpeg
-          [ -f "$BIN" ] || BIN=src/ffmpeg
+          # 此时 cwd 是仓库根：源码在 runtime/src 下
+          BIN=runtime/src/dist/bin/ffmpeg
+          [ -f "$BIN" ] || BIN=runtime/src/ffmpeg
           test -f "$BIN"
           cp "$BIN" runtime/bin/ffmpeg
           test -x runtime/bin/ffmpeg

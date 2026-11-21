@@ -238,8 +238,10 @@ jobs:
           make install
           cd ../..
           mkdir -p runtime/bin
-          cp src/ffmpeg runtime/bin/ffmpeg
-          test -f runtime/bin/ffmpeg
+          BIN="$(ls src/dist/bin/ffmpeg src/ffmpeg 2>/dev/null | head -1)"
+          test -n "$BIN"
+          cp "$BIN" runtime/bin/ffmpeg
+          test -x runtime/bin/ffmpeg
           ffmpeg_hash="$(shasum -a 256 runtime/bin/ffmpeg | cut -d' ' -f1)"
           echo "built macos-x64 ffmpeg sha256 = $ffmpeg_hash"
           # prepare 会在 target==host 时执行 x64 ffmpeg 做版本/编码器探测，需要 Rosetta
@@ -429,10 +431,19 @@ jobs:
         working-directory: pc
         env:
           CL: /std:c20
+          # 显式传架构：GITHUB_ENV 的传递在 arm64 runner 上未生效，prepare 会回落 x64
+          PET_MANAGER_TARGET_ARCH: arm64
+          PET_MANAGER_FFMPEG_BIN: ${{ github.workspace }}\runtime\ffmpeg.exe
+          PET_MANAGER_FFMPEG_README: ${{ github.workspace }}\runtime\ffmpeg.README
+          PET_MANAGER_FFMPEG_LICENSE: ${{ github.workspace }}\runtime\ffmpeg.LICENSE
+          PET_MANAGER_FFMPEG_SOURCE_ARCHIVE: ${{ github.workspace }}\runtime\ffmpeg-8.1.3.tar.xz
+          PET_MANAGER_NODE_BIN: ${{ github.workspace }}\runtime\node.exe
         run: npm run prepare:desktop
 
       - name: Build (tauri build nsis for arm64)
         working-directory: pc
+        env:
+          PET_MANAGER_TARGET_ARCH: arm64
         run: npx tauri build --target aarch64-pc-windows-msvc --bundles nsis --ci
 
       - name: Collect installers

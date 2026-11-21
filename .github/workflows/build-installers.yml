@@ -232,7 +232,7 @@ jobs:
             --disable-debug --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice \
             --disable-network --disable-autodetect --disable-gpl --disable-nonfree \
             --enable-static --disable-shared --disable-zlib --enable-videotoolbox \
-            --extra-cflags=-arch x86_64 --extra-ldflags=-arch x86_64"
+            --extra-cflags=\"-arch x86_64\" --extra-ldflags=\"-arch x86_64\""
           eval "$CONFIGURE"
           make -j4
           make install
@@ -342,7 +342,7 @@ jobs:
             --cross-prefix=aarch64-w64-mingw32- --enable-cross-compile \
             --disable-debug --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice \
             --disable-network --disable-autodetect --disable-gpl --disable-nonfree \
-            --enable-static --disable-shared --disable-zlib --enable-mediafoundation
+            --enable-static --disable-shared --disable-zlib --enable-mediafoundation --enable-d3d11va
           make -j"$(nproc)"
           test -f ffmpeg.exe
           aarch64-w64-mingw32-objdump -f ffmpeg.exe | grep aarch64

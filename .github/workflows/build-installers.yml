@@ -71,6 +71,10 @@ jobs:
           # 追加语义必须走 GITHUB_PATH 文件（GITHUB_ENV 的 PATH 会整体替换 runner PATH）。
           "C:\stage\app\tools" >> $env:GITHUB_PATH
 
+      - name: npm ci (client)
+        working-directory: pc
+        run: npm ci
+
       - name: Restore audited bridge production dependencies (locked)
         working-directory: pc/src-tauri/bridge/packages/clawd-backend-service
         run: npm ci
@@ -188,9 +192,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p runtime
-          curl -fsSL -o node.tar.gz "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-x64.tar.gz"
-          curl -fsSL -o SHASUMS256.txt "https://nodejs.org/dist/$NODE_VERSION/SHASUMS256.txt"
-          grep "node-$NODE_VERSION-darwin-x64.tar.gz" SHASUMS256.txt | shasum -a 256 -c -
+          # nodejs.org 偶发不可达：重试后回退 npmmirror 镜像；SHASUMS 与包须同源校验
+          fetch_node() {
+            for base in "https://nodejs.org/dist" "https://npmmirror.com/mirrors/node"; do
+              curl -fsSL --retry 3 -o node.tar.gz "$base/$NODE_VERSION/node-$NODE_VERSION-darwin-x64.tar.gz" || continue
+              curl -fsSL --retry 3 -o SHASUMS256.txt "$base/$NODE_VERSION/SHASUMS256.txt" || continue
+              grep "node-$NODE_VERSION-darwin-x64.tar.gz" SHASUMS256.txt | shasum -a 256 -c - && { echo "fetched from $base"; return 0; }
+            done
+            return 1
+          }
+          fetch_node
           tar -xzf node.tar.gz --strip-components=2 -C runtime "node-$NODE_VERSION-darwin-x64/bin/node"
           node_hash="$(shasum -a 256 runtime/node | cut -d' ' -f1)"
           echo "official darwin-x64 node sha256 = $node_hash"
@@ -284,7 +295,144 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq p7zip-full
-          LLVM_MINGW_URL="$(gh api repos/mstorsjo/llvm-mingw/releases/latest --jq '.assets[].browser_download_url' | grep 'ucrt-ubuntu-x86_64.tar.xz$' | head -1)"
+          LLVM_MINGW_URL="$(gh api repos/mstorsjo/llvm-mingw/releases/latest --jq '.assets[].browser_download_url' | grep 'ucrt-ubuntu.*x86_64.tar.xz
+          echo "llvm-mingw: $LLVM_MINGW_URL"
+          curl -fsSL -o llvm-mingw.tar.xz "$LLVM_MINGW_URL"
+          mkdir -p "$GITHUB_WORKSPACE/llvm-mingw"
+          tar -xJf llvm-mingw.tar.xz --strip-components=1 -C "$GITHUB_WORKSPACE/llvm-mingw"
+          echo "$GITHUB_WORKSPACE/llvm-mingw/bin" >> "$GITHUB_PATH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Extract the audited source tar from the official setup
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri $env:UPSTREAM_SETUP_URL -OutFile setup.exe -MaximumRedirection 5
+          7z x setup.exe -oextracted -y | Select-String "ffmpeg-8.1.3|ffmpeg.LICENSE"
+          Get-ChildItem -Recurse extracted | Where-Object { $_.Name -match 'ffmpeg-8\.1\.3\.tar\.xz|ffmpeg\.LICENSE' } | ForEach-Object { Copy-Item $_.FullName runtime/ -Force -ErrorAction SilentlyContinue }
+          New-Item -ItemType Directory -Force -Path runtime | Out-Null
+          Get-ChildItem -Recurse extracted -Filter 'ffmpeg-8.1.3.tar.xz' | ForEach-Object { Copy-Item $_.FullName runtime/ -Force }
+          Get-ChildItem -Recurse extracted -Filter 'ffmpeg.LICENSE' | ForEach-Object { Copy-Item $_.FullName runtime/ffmpeg.LICENSE -Force }
+          test -f runtime/ffmpeg-8.1.3.tar.xz
+          test -f runtime/ffmpeg.LICENSE
+
+      - name: Cross-build FFmpeg 8.1.3 windows-arm64 (llvm-mingw)
+        run: |
+          set -euo pipefail
+          source_hash="$(sha256sum runtime/ffmpeg-8.1.3.tar.xz | cut -d' ' -f1)"
+          test "$source_hash" = "$AUDIT_FFMPEG_SOURCE" || { echo "source tar mismatch: $source_hash"; exit 1; }
+          mkdir -p runtime/src
+          tar -xf runtime/ffmpeg-8.1.3.tar.xz -C runtime/src --strip-components=1
+          cd runtime/src
+          export PATH="$GITHUB_WORKSPACE/llvm-mingw/bin:$PATH"
+          ./configure --prefix="$PWD/dist" --arch=aarch64 --target-os=mingw32 \
+            --cross-prefix=aarch64-w64-mingw32- --enable-cross-compile \
+            --disable-debug --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice \
+            --disable-network --disable-autodetect --disable-gpl --disable-nonfree \
+            --enable-static --disable-shared --disable-zlib --enable-mediafoundation
+          make -j"$(nproc)"
+          test -f ffmpeg.exe
+          aarch64-w64-mingw32-objdump -f ffmpeg.exe | grep aarch64
+          ffmpeg_hash="$(sha256sum ffmpeg.exe | cut -d' ' -f1)"
+          echo "built windows-arm64 ffmpeg sha256 = $ffmpeg_hash"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp ffmpeg.exe "$GITHUB_WORKSPACE/out/ffmpeg.exe"
+          cp ../ffmpeg-8.1.3.tar.xz "$GITHUB_WORKSPACE/out/ffmpeg-8.1.3.tar.xz"
+          cp ../ffmpeg.LICENSE "$GITHUB_WORKSPACE/out/ffmpeg.LICENSE"
+          {
+            echo "Pet Manager FFmpeg runtime (windows-arm64, cross-built in CI from the audited source tar)"
+            echo "FFmpeg version: 8.1.3"
+            echo "./configure --arch=aarch64 --target-os=mingw32 --enable-cross-compile --disable-debug --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice --disable-network --disable-autodetect --disable-gpl --disable-nonfree --enable-static --disable-shared --disable-zlib --enable-mediafoundation"
+          } > "$GITHUB_WORKSPACE/out/ffmpeg.README"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-arm64-runtime
+          path: out/
+
+  windows-arm64:
+    runs-on: windows-11-arm
+    timeout-minutes: 120
+    needs: windows-arm64-runtime
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Stage firmware OTA inputs
+        run: python pc/scripts/stage-release-firmware.py
+
+      - name: Fetch the official arm64 Node (checksum-verified)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path runtime | Out-Null
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/$env:NODE_VERSION/node-$env:NODE_VERSION-win-arm64.zip" -OutFile node.zip -MaximumRedirection 5
+          Invoke-WebRequest -Uri "https://nodejs.org/dist/$env:NODE_VERSION/SHASUMS256.txt" -OutFile SHASUMS256.txt
+          $expected = (Select-String -Path SHASUMS256.txt -Pattern "node-.+-win-arm64\.zip").Line.Split(' ')[0]
+          $actual = (Get-FileHash -Algorithm SHA256 node.zip).Hash.ToLower()
+          if ($expected -ne $actual) { throw "node zip hash mismatch: $actual" }
+          Expand-Archive -Path node.zip -DestinationPath . -Force
+          Copy-Item "node-$env:NODE_VERSION-win-arm64\node.exe" runtime\node.exe
+          $hash = (Get-FileHash -Algorithm SHA256 runtime\node.exe).Hash.ToLower()
+          Write-Host "official win-arm64 node sha256 = $hash"
+
+      - name: Download the cross-built FFmpeg runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-arm64-runtime
+          path: runtime/
+
+      - name: Export runtime for prepare
+        shell: pwsh
+        run: |
+          test -f runtime\ffmpeg.exe
+          test -f runtime\ffmpeg.README
+          test -f runtime\ffmpeg-8.1.3.tar.xz
+          test -f runtime\ffmpeg.LICENSE
+          {
+            "PET_MANAGER_FFMPEG_BIN=$env:GITHUB_WORKSPACE\runtime\ffmpeg.exe"
+            "PET_MANAGER_FFMPEG_README=$env:GITHUB_WORKSPACE\runtime\ffmpeg.README"
+            "PET_MANAGER_FFMPEG_LICENSE=$env:GITHUB_WORKSPACE\runtime\ffmpeg.LICENSE"
+            "PET_MANAGER_FFMPEG_SOURCE_ARCHIVE=$env:GITHUB_WORKSPACE\runtime\ffmpeg-8.1.3.tar.xz"
+            "PET_MANAGER_NODE_BIN=$env:GITHUB_WORKSPACE\runtime\node.exe"
+            "PET_MANAGER_TARGET_ARCH=arm64"
+          } >> $env:GITHUB_ENV
+
+      - name: npm ci (client)
+        working-directory: pc
+        run: npm ci
+
+      - name: Restore audited bridge production dependencies (locked)
+        working-directory: pc/src-tauri/bridge/packages/clawd-backend-service
+        run: npm ci
+
+      - name: Prepare desktop resources
+        working-directory: pc
+        env:
+          CL: /std:c20
+        run: npm run prepare:desktop
+
+      - name: Build (tauri build nsis for arm64)
+        working-directory: pc
+        run: npx tauri build --target aarch64-pc-windows-msvc --bundles nsis --ci
+
+      - name: Collect installers
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item pc\src-tauri\target\aarch64-pc-windows-msvc\release\bundle\nsis\*.exe dist\
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-arm64-installer
+          path: dist/
+ | head -1)"
           echo "llvm-mingw: $LLVM_MINGW_URL"
           curl -fsSL -o llvm-mingw.tar.xz "$LLVM_MINGW_URL"
           mkdir -p "$GITHUB_WORKSPACE/llvm-mingw"

@@ -57,7 +57,7 @@ export function copyDependencyLicenses(sourceDirectory, destinationDirectory) {
 }
 
 // Reviewed Node26.7.0 inputs; a new vendor build needs an explicit license review.
-const node267Builds = new Set(["913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4", "abdc47a6bc8b45e6272d62d4c5c0c0419fb5dbedf3fe12ddabb595634f06f81f", "e921fe5307e29bf6fd00000dd594356affd3a7b044e52720c7f10decbdc305b9"]);
+const node267Builds = new Set(["913b144fdb40638b1acef7974ab3c33fbd527cc0974cb5da467ab1e6ac51b4d4", "abdc47a6bc8b45e6272d62d4c5c0c0419fb5dbedf3fe12ddabb595634f06f81f", "e921fe5307e29bf6fd00000dd594356affd3a7b044e52720c7f10decbdc305b9", "817eeedc52833a9c5d3ac19e1b0b6ee1d489a3e23b7c1679ecf539b0a4c9ac0e"]);
 export function copyNodeRuntimeLicense(binaryPath, sourceDirectory, destinationDirectory) {
   const st = lstatSync(binaryPath);
   if (!st.isFile() || st.isSymbolicLink() || !node267Builds.has(digest(readFileSync(binaryPath)))) {

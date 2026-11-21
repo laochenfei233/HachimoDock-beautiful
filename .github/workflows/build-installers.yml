@@ -231,7 +231,7 @@ jobs:
           CONFIGURE="./configure --prefix=$PWD/dist --arch=x86_64 --target-os=darwin --enable-cross-compile \
             --disable-debug --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice \
             --disable-network --disable-autodetect --disable-gpl --disable-nonfree \
-            --enable-static --disable-shared --disable-zlib --enable-videotoolbox \
+            --enable-static --disable-shared --disable-zlib --disable-x86asm --enable-videotoolbox \
             --extra-cflags=\"-arch x86_64\" --extra-ldflags=\"-arch x86_64\""
           eval "$CONFIGURE"
           make -j4
@@ -345,7 +345,8 @@ jobs:
             --enable-static --disable-shared --disable-zlib --enable-mediafoundation --enable-d3d11va
           make -j"$(nproc)"
           test -f ffmpeg.exe
-          aarch64-w64-mingw32-objdump -f ffmpeg.exe | grep aarch64
+          file ffmpeg.exe
+          llvm-objdump -f ffmpeg.exe | grep -iE 'aarch64|arm64'
           ffmpeg_hash="$(sha256sum ffmpeg.exe | cut -d' ' -f1)"
           echo "built windows-arm64 ffmpeg sha256 = $ffmpeg_hash"
           mkdir -p "$GITHUB_WORKSPACE/out"

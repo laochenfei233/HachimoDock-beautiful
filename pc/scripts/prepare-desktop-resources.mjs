@@ -410,8 +410,11 @@ if (builtinsCheck.status !== 0) throw new Error('Built-in local-delights resourc
 // Python validation may leave bytecode containing absolute build-machine paths.
 cleanSkillBytecode(join(repositoryRoot, "pc", "skills", "petui"));
 const targetArch = requestedArch(target, process.platform, process.arch);
+// wasi-sdk 没有 windows-arm64 宿主构建；Windows 11 ARM 可通过 x64 仿真运行该工具链，
+// 因此 arm64 安装包复用 windows-x64 的 PetUI 运行时。
+const petuiKey = target === "windows" && targetArch === "arm64" ? "windows-x64" : `${target}-${targetArch}`;
 const authoring = spawnSync(process.execPath,
-  [join(scriptDir, "prepare-petui-runtime.mjs"), `${target}-${targetArch}`, join(tauriRoot, "authoring-runtime-bundle")],
+  [join(scriptDir, "prepare-petui-runtime.mjs"), petuiKey, join(tauriRoot, "authoring-runtime-bundle")],
   { stdio: "inherit" });
 if (authoring.status !== 0) throw new Error("无法准备 PetUI 创作工具链");
 

@@ -238,8 +238,10 @@ jobs:
           make install
           cd ../..
           mkdir -p runtime/bin
-          BIN="$(ls src/dist/bin/ffmpeg src/ffmpeg 2>/dev/null | head -1)"
-          test -n "$BIN"
+          # set -e 下多路径 ls 的缺失会中止，逐个探测
+          BIN=src/dist/bin/ffmpeg
+          [ -f "$BIN" ] || BIN=src/ffmpeg
+          test -f "$BIN"
           cp "$BIN" runtime/bin/ffmpeg
           test -x runtime/bin/ffmpeg
           ffmpeg_hash="$(shasum -a 256 runtime/bin/ffmpeg | cut -d' ' -f1)"

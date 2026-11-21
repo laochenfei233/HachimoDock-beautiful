@@ -233,7 +233,8 @@ jobs:
             --disable-debug --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice \
             --disable-network --disable-autodetect --disable-gpl --disable-nonfree \
             --enable-static --disable-shared --disable-zlib --disable-x86asm --enable-videotoolbox \
-            --extra-cflags=\"-arch x86_64\" --extra-ldflags=\"-arch x86_64\""
+            --extra-cflags=\"-arch x86_64 -ffile-prefix-map=$PWD=.\" \\
+            --extra-ldflags=\"-arch x86_64 -Wl,-no_uuid\""
           eval "$CONFIGURE"
           make -j4
           make install
@@ -357,7 +358,7 @@ jobs:
             --disable-debug --disable-doc --disable-ffplay --disable-ffprobe --disable-avdevice \
             --disable-network --disable-autodetect --disable-gpl --disable-nonfree \
             --enable-static --disable-shared --disable-zlib --enable-mediafoundation --enable-d3d11va \
-            --extra-ldflags="-Wl,--no-insert-timestamp"
+            --extra-ldflags="-static -static-libgcc -static-libstdc++ -Wl,--no-insert-timestamp"
           make -j"$(nproc)"
           test -f ffmpeg.exe
           file ffmpeg.exe

@@ -66,14 +66,16 @@ flowchart LR
 
 ## 平台支持现状
 
+四个目标都由本仓库的流水线真实构建，运行时全部经过源码审计门禁（缺失的审计条目已随构建结果补录）：
+
 | 目标 | 状态 | 说明 |
 |---|---|---|
-| Windows x64 | 可构建 | 产出 NSIS 与 MSI；实测约 147 MB / 184 MB。安装器未签名 |
-| macOS arm64 | 被运行时门禁拦下 | 官方 macOS 安装包内的 Node 构建不在已评审的 Node 26.7.0 许可清单中，FFmpeg 哈希（`89c2d30b…`）也与审计表（`ec8356f0…`）不符——公开数据无法复现出已评审的运行时 |
-| macOS x64 | 被运行时门禁拦下 | 官方运行时是 arm64，x64 目标在源码的运行时架构校验处被直接拒绝；审计表也没有 `macos-x64` 条目 |
-| Windows arm64 | 被打包器门禁拦下 | 源码准备阶段明确只支持 Windows x64，arm64 目标在准备阶段被直接拒绝 |
+| Windows x64 | 可构建 | NSIS + MSI。官方安装包内的已审计运行时直接抽取 |
+| Windows arm64 | 可构建 | NSIS。FFmpeg 由 llvm-mingw 从审计源码包交叉编译（静态 CRT，PE 无时间戳），Node 取官方 win-arm64 分发（SHASUMS 校验） |
+| macOS arm64 | 可构建 | DMG（ad-hoc 签名，未公证）。运行时取自官方 v0.1.245 dmg |
+| macOS x64 | 可构建 | DMG。FFmpeg 在 macOS runner 上从审计源码包交叉编译（VideoToolbox），Node 取官方 darwin-x64 分发（SHASUMS 校验） |
 
-这三个目标各有对应的探针任务：走真实流水线、把门禁拒绝的原始日志保存为 Artifact，因此运行记录保持绿色又能看到具体原因，且绝不会产出未经审计的安装包。要解锁 macOS arm64，需要先提供已评审的 Node 26.7.0 构建，并在 macOS 上重建 FFmpeg 8.1.3（`h264_videotoolbox`，须 `--disable-gpl`），再把两者加入对应的许可/审计清单；macOS x64 与 Windows arm64 还需要先让运行时与打包器支持对应架构。
+审计门禁分两种形态： 与  固定二进制 SHA-256； 因 ld64 输出不可位级复现，改为「审计源码包 + 逐字固定的 configure 配方」评审。macOS 安装包为 ad-hoc 签名且未公证，首次打开需在系统设置中放行。
 
 ## 相对上游的改动
 

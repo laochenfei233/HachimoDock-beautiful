@@ -88,9 +88,15 @@ jobs:
           CL: /std:c20
         run: npm run prepare:desktop
 
-      - name: Build (tauri build nsis,msi)
+      # NSIS 用配置里的预发布版本（0.1.245-rc.1）；MSI/WiX 只接受纯数字版本，
+      # 因此 MSI 单独以基础版本号构建（与既往 0.1.230-rc1 的打包方式一致）。
+      - name: Build NSIS with the configured version
         working-directory: pc
-        run: npx tauri build --target x86_64-pc-windows-msvc --bundles nsis,msi --ci
+        run: npx tauri build --target x86_64-pc-windows-msvc --bundles nsis --ci
+
+      - name: Build MSI with the numeric base version
+        working-directory: pc
+        run: npx tauri build --target x86_64-pc-windows-msvc --bundles msi --ci --config "{\"version\":\"0.1.245\"}"
 
       - name: Collect installers
         shell: pwsh

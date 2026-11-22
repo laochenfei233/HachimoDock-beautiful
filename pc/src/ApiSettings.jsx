@@ -92,11 +92,12 @@ const THEME_OPTIONS = [
   { id: "dark", label: "深色" },
 ];
 
-function AppearanceCard() {
+function AppearanceCard({ embedded = false }) {
   const [preference, setPreference] = useState(() => getThemeState().preference);
   useEffect(() => subscribeTheme((state) => setPreference(state.preference)), []);
-  return (
-    <Card title="外观" subtitle="界面主题立即生效；「跟随系统」随系统深浅色自动切换。">
+  const subtitle = "界面主题立即生效；「跟随系统」随系统深浅色自动切换。";
+  const body = (
+    <>
       <div className="api-settings__segments" role="radiogroup" aria-label="外观主题">
         {THEME_OPTIONS.map((option) => (
           <button
@@ -112,8 +113,22 @@ function AppearanceCard() {
         ))}
       </div>
       <p className="muted small">深色模式下界面与组件预览同步变暗；图片和设备屏幕内容保持原样。</p>
-    </Card>
+    </>
   );
+  if (embedded) {
+    return (
+      <section className="api-settings__subsection" aria-label="外观">
+        <header className="api-settings__subsection-head">
+          <div>
+            <h3 className="api-settings__subsection-title">外观</h3>
+            <p className="muted small">{subtitle}</p>
+          </div>
+        </header>
+        {body}
+      </section>
+    );
+  }
+  return <Card title="外观" subtitle={subtitle}>{body}</Card>;
 }
 
 export default function ApiSettings({ onBack, configReadError = "", active = true }) {
@@ -1235,8 +1250,10 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
         </div>
       </Card>
 
-      <AppearanceCard />
-      <AppUpdateCard active={active} />
+      <Card title="其他配置" subtitle="界面外观与应用更新；这些设置不涉及服务凭据。">
+        <AppearanceCard embedded />
+        <AppUpdateCard active={active} embedded />
+      </Card>
     </PageShell>
     </div>
   );

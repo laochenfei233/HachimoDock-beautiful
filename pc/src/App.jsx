@@ -33,6 +33,7 @@ const DeviceSettings = lazy(() => import("./DeviceSettings.jsx"));
 const SmartHome = lazy(() => import("./SmartHome.jsx"));
 import { DeviceContextProvider, useDeviceContext } from "./shell/DeviceContext.jsx";
 import ToastStack, { ToastProvider, useToast } from "./shell/ToastStack.jsx";
+import AppUpdateNotice from "./AppUpdateNotice.jsx";
 import ContextRail from "./shell/ContextRail.jsx";
 import FirmwareUpdateNavItem from "./shell/FirmwareUpdateNavItem.jsx";
 import {
@@ -213,6 +214,7 @@ export default function App() {
           handleDetailBack={handleDetailBack}
         />
         <ToastStack />
+        <AppUpdateNotice />
       </DeviceContextProvider>
     </ToastProvider>
   );

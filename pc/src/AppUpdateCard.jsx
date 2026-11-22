@@ -2,10 +2,11 @@
  * [Input] Tauri app_update_check/download/install commands and the
  *         app-update-download-progress event; release metadata comes from the
  *         GitHub repo configured in src-tauri/src/app_update.rs.
- * [Output] Settings-tab update card: one auto check on mount (empty state when
- *          the release repo does not exist yet), release notes display,
- *          in-app download with percent progress, then installer launch.
- * [Pos] component node in pc/src, rendered at the bottom of ApiSettings.
+ * [Output] Update section: one auto check on mount (empty state when the
+ *          release repo does not exist yet), release notes display, in-app
+ *          download with percent progress, then installer launch. Rendered
+ *          (with `embedded`) inside the settings "其他配置" card.
+ * [Pos] component node in pc/src, embedded in ApiSettings.
  * [Sync] If this file changes, update `pc/src/.folder.md`.
  */
 
@@ -19,7 +20,7 @@ import { useExitProtection } from "./lib/exit-protection.js";
 
 const toneClass = (tone) => (tone ? ` is-${tone}` : "");
 
-export default function AppUpdateCard({ active = true }) {
+export default function AppUpdateCard({ active = true, embedded = false }) {
   const { push } = useToast();
   const [status, setStatus] = useState(null);
   const [checking, setChecking] = useState(false);
@@ -127,22 +128,20 @@ export default function AppUpdateCard({ active = true }) {
     : updateAvailable ? `发现新版本 ${latest}${published}；请前往发布页下载本平台的安装包。`
     : `已是最新版本（${latest}）${published}。`;
 
-  return (
-    <Card
-      title="应用更新"
-      subtitle={`当前版本 ${status?.current_version || "…"}；安装包来自 GitHub Releases。`}
-      actions={
-        <button
-          type="button"
-          className="btn-ghost btn-sm"
-          onClick={() => runCheck({ announce: true })}
-          disabled={checking || downloading}
-        >
-          {checking ? <LoaderCircle size={14} className="spin" /> : <RefreshCw size={14} />}
-          检查更新
-        </button>
-      }
+  const checkButton = (
+    <button
+      type="button"
+      className="btn-ghost btn-sm"
+      onClick={() => runCheck({ announce: true })}
+      disabled={checking || downloading}
     >
+      {checking ? <LoaderCircle size={14} className="spin" /> : <RefreshCw size={14} />}
+      检查更新
+    </button>
+  );
+
+  const body = (
+    <>
       <div className={`api-settings__result${toneClass(tone)}`} role="status">
         {message}
       </div>
@@ -169,6 +168,30 @@ export default function AppUpdateCard({ active = true }) {
           )}
         </div>
       )}
+    </>
+  );
+
+  const subtitle = `当前版本 ${status?.current_version || "…"}；安装包来自 GitHub Releases。`;
+
+  // 嵌入「其他配置」卡片时不再套一层 Card，只渲染小节标题与动作。
+  if (embedded) {
+    return (
+      <section className="api-settings__subsection" aria-label="应用更新">
+        <header className="api-settings__subsection-head">
+          <div>
+            <h3 className="api-settings__subsection-title">应用更新</h3>
+            <p className="muted small">{subtitle}</p>
+          </div>
+          {checkButton}
+        </header>
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <Card title="应用更新" subtitle={subtitle} actions={checkButton}>
+      {body}
     </Card>
   );
 }

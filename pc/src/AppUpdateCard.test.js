@@ -22,10 +22,31 @@ test("AppUpdateCard auto-checks on mount and renders the check/download/install 
   assert.match(card, /发布于 \$\{status\.published_at\.slice\(0, 10\)\}/);
 });
 
-test("ApiSettings renders the update card below the appearance group", () => {
+test("ApiSettings hosts appearance and updates inside the 其他配置 card", () => {
   const source = read("ApiSettings.jsx");
   assert.match(source, /import AppUpdateCard from "\.\/AppUpdateCard\.jsx";/);
-  assert.match(source, /<AppearanceCard \/>\n      <AppUpdateCard active=\{active\} \/>/);
+  assert.match(source, /<Card title="其他配置" subtitle="界面外观与应用更新；这些设置不涉及服务凭据。">/);
+  assert.match(source, /<AppearanceCard embedded \/>\n        <AppUpdateCard active=\{active\} embedded \/>/);
+  // 嵌入模式不再套一层 Card，改用小节标题。
+  const card = read("AppUpdateCard.jsx");
+  assert.match(card, /if \(embedded\) \{/);
+  assert.match(card, /api-settings__subsection/);
+});
+
+test("startup notice defers to the 12-hour gate and per-version dismissal", () => {
+  const notice = read("AppUpdateNotice.jsx");
+  assert.match(notice, /shouldShowUpdateNotice\(next, readDismissedUpdateVersion\(\)\)/);
+  assert.match(notice, /dismissUpdateVersion\(status\?\.latest_version \|\| ""\)/);
+  assert.match(notice, /invoke\("app_update_check"\)/);
+  assert.match(notice, /invoke\("app_update_download"\)/);
+  assert.match(notice, /invoke\("app_update_install", \{ path: downloadedPath \}\)/);
+  assert.match(notice, /status\.release_notes/);
+  assert.match(notice, /发布观察期/);
+  // 无 Tauri（web 预览）时不发起检查。
+  assert.match(notice, /window\.__TAURI_INTERNALS__/);
+  const app = read("App.jsx");
+  assert.match(app, /import AppUpdateNotice from "\.\/AppUpdateNotice\.jsx";/);
+  assert.match(app, /<ToastStack \/>\n        <AppUpdateNotice \/>/);
 });
 
 test("update commands are registered with the local-only capability", () => {

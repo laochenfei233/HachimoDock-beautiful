@@ -82,19 +82,29 @@ struct Asset {
     size: u64,
 }
 
-/// Windows 选名称含 windows 的 *.exe 安装包，macOS 选 *.dmg；没有匹配返回 None。
+/// 同一发布同时提供多架构安装包：优先选架构匹配的资产，找不到再退回任意匹配项。
+/// Windows 只在名称含 windows 的 *.exe 里选，macOS 只在 *.dmg 里选。
 fn pick_asset(assets: &[Asset]) -> Option<Asset> {
-    if cfg!(target_os = "macos") {
-        assets.iter().find(|a| a.name.to_ascii_lowercase().ends_with(".dmg")).cloned()
-    } else {
-        assets
-            .iter()
-            .find(|a| {
-                let lower = a.name.to_ascii_lowercase();
+    let arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
+    let arch_alias = if cfg!(target_arch = "aarch64") { "aarch64" } else { "amd64" };
+    let matches_arch = |name: &str| name.contains(arch) || name.contains(arch_alias);
+    let candidates: Vec<Asset> = assets
+        .iter()
+        .filter(|asset| {
+            let lower = asset.name.to_ascii_lowercase();
+            if cfg!(target_os = "macos") {
+                lower.ends_with(".dmg")
+            } else {
                 lower.contains("windows") && lower.ends_with(".exe")
-            })
-            .cloned()
-    }
+            }
+        })
+        .cloned()
+        .collect();
+    candidates
+        .iter()
+        .find(|asset| matches_arch(&asset.name.to_ascii_lowercase()))
+        .or_else(|| candidates.first())
+        .cloned()
 }
 
 fn http_client() -> reqwest::Result<reqwest::blocking::Client> {
@@ -337,6 +347,21 @@ mod tests {
         let picked = pick_asset(&assets).expect("windows asset");
         assert_eq!(picked.name, "HachimoDock_0.1.246_Windows-x64-setup.exe");
         assert!(pick_asset(&[]).is_none());
+    }
+
+    #[test]
+    fn pick_asset_never_mixes_architectures_in_one_release() {
+        let assets = vec![
+            Asset { name: "HachimoDock_0.1.246_Windows-arm64-setup.exe".into(), url: "a".into(), size: 1 },
+            Asset { name: "HachimoDock_0.1.246_Windows-x64-setup.exe".into(), url: "x".into(), size: 2 },
+        ];
+        let picked = pick_asset(&assets).expect("windows asset");
+        let expected = if cfg!(target_arch = "aarch64") {
+            "HachimoDock_0.1.246_Windows-arm64-setup.exe"
+        } else {
+            "HachimoDock_0.1.246_Windows-x64-setup.exe"
+        };
+        assert_eq!(picked.name, expected);
     }
 
 }

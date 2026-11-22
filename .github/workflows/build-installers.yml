@@ -508,7 +508,11 @@ jobs:
           set -euo pipefail
           VERSION="$(jq -r .version pc/src-tauri/tauri.conf.json)"
           mkdir -p dist
-          find artifacts -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' \) -exec cp {} dist/ \;
+          for d in artifacts/windows-x64-installers artifacts/windows-arm64-installer \
+                   artifacts/macos-arm64-installer artifacts/macos-x64-installer; do
+            [ -d "$d" ] || continue
+            find "$d" -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' \) -exec cp {} dist/ \;
+          done
           # 发布名对齐应用内更新器的约定：Windows 资产含 windows 与架构名，macOS 为 .dmg
           for f in dist/*x64-setup.exe; do [ -e "$f" ] && mv "$f" "dist/HachimoDock_${VERSION}_Windows-x64-setup.exe"; done
           for f in dist/*arm64-setup.exe; do [ -e "$f" ] && mv "$f" "dist/HachimoDock_${VERSION}_Windows-arm64-setup.exe"; done
@@ -529,4 +533,4 @@ jobs:
             gh release create "$TAG" --title "HachimoDock-beautiful ${VERSION}" --notes-file .github/release-notes.md
           fi
           gh release upload "$TAG" dist/* --clobber
-          gh release view "$TAG" --json tagName,isLatest,assets --jq '{tag:.tagName, latest:.isLatest, assets:[.assets[].name]}'
+          gh release view "$TAG" --json tagName,assets --jq '{tag:.tagName, assets:[.assets[].name]}'

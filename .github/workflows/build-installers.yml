@@ -96,7 +96,7 @@ jobs:
 
       - name: Build MSI with the numeric base version
         working-directory: pc
-        run: npx tauri build --target x86_64-pc-windows-msvc --bundles msi --ci --config "{\"version\":\"0.1.245\"}"
+        run: npx tauri build --target x86_64-pc-windows-msvc --bundles msi --ci --config '{"version":"0.1.245"}'
 
       - name: Collect installers
         shell: pwsh

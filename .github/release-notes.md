@@ -1,28 +1,48 @@
 ## HachimoDock-beautiful 0.1.245-rc.1
 
-HachimoDock 的**非官方构建分支**的第一个候选版本，由本仓库 GitHub Actions 从 `main` 源码构建。运行时（LGPL FFmpeg 8.1.3、Node 26.7.0）全部经过源码仓库的许可/审计门禁。
+HachimoDock 的**非官方构建分支**的首个候选版本，由本仓库 GitHub Actions 从 `main` 源码构建。运行时（LGPL FFmpeg 8.1.3、Node 26.7.0）全部经过源码仓库的许可/审计门禁。本版本汇总自 2026-11-12 以来的全部软件更新。
 
 > 非官方分支，与上游作者无隶属或背书关系；按上游许可要求标注为修改版本。需要官方版本请前往 [ai-maker-lab/HachimoDock](https://github.com/ai-maker-lab/HachimoDock/releases)。
 
-### 本次包含
+### 新增
 
-- **更新提醒**：新版本发布满 12 小时后，客户端启动时弹窗展示更新内容，可当场下载安装；同一版本只提醒一次。
-- **设置页整理**：「外观」与「应用更新」合并进「其他配置」分组。
-- **应用内更新**：设置页可检查版本、查看发布说明、应用内下载（进度 + 镜像回退）并启动安装；macOS 引导到发布页。
-- **四平台安装包**：Windows x64 / arm64（NSIS）、macOS arm64 / x64（DMG）。
-- 本分支既有的 Prism / ZCode 支持、多服务商语音、Liquid Glass 双主题界面、天气数据源，以及上游 0.1.245 的 Devin/Hermes、Wi-Fi 配对、联网检索等能力。
+- **应用内更新**：设置页可检查最新发布版本、查看发布说明，并在应用内下载安装包（带进度、支持网络镜像回退），下载完成后直接启动安装器；不支持应用内安装的平台引导到发布页。仓库尚无发布版本时显示「暂无发布版本」而不报错。
+- **更新提醒**：新版本发布满 12 小时后，客户端启动时弹窗提示并展示更新内容，可当场下载安装；同一版本只提醒一次，选择「稍后提醒」后不再打扰，长时间运行每 6 小时复查一次。
+- **四平台安装包**：Windows x64 / arm64（NSIS、MSI）与 macOS arm64 / x64（DMG）均由流水线构建并发布，附 SHA256SUMS 校验。
+- **ZCode 支持**：ZCode（智谱桌面端）成为与 Codex 同级的桌面对话渠道——状态跟随（读取本地日志与会话库，不含回复正文与 token 统计）、当前可见输入框的语音草稿、设备气泡派发任务。
+- **Prism 支持**：Prism（DeepSeek Harness 分支）可作为可选 Agent 通道，设备气泡选择会通过桥接插件切换其桌面对话，不抢窗口焦点。
+- **Prism 语音与对话派发**：macOS 与 Windows 均支持把语音草稿写入 Prism 当前可见输入框并确认提交；对话大模型可向 Prism 派发任务。Prism 没有回执事件源，语音只确认「已接收」，完成结果请在 Prism 客户端查看；与 DeepSeek Harness 同时打开时草稿缓存互相隔离，不会串稿。
+- **Devin 与 Hermes Agent**：桌面 Agent 跟随新增 Devin（云端会话状态 + Windows 当前可见对话语音草稿）与 Hermes Agent（本地会话状态）。
+- **多服务商语音**：语音识别与语音合成可分别选择 豆包（默认）/ 通义千问 / MiMo / 自定义兼容端点，支持跨服务商组合（例如通义识别 + 豆包合成）。各服务商凭据按来源隔离，切换不会串用；通义千问支持流式识别与流式合成。
+- **形象级语音服务商**：每个形象可在「人设与声音」里单独指定语音合成服务商，未指定时跟随全局。
+- **对话联网检索**：可为实时对话开启按需联网检索，并单独选择检索来源（含 DeepSeek 搜索与备用模式），搜索 Key 与对话 Key 相互独立。
+- **Wi-Fi 配对与无线维护**：WiFi6 板型可在同一局域网内与电脑配对，支持状态跟随、实时对话、无线组件安装与固件升级；配对成功后仍需单独授予无线控制权限。
+- **天气数据源**：设置页可配置和风天气 Key/Host 与彩云天气 Token，密钥只进系统凭据库、永不回显；组件与场景通过 PC 端取数，包内不再需要携带凭据。
+- **Liquid Glass 界面**：卡片、弹窗与侧边栏采用半透明玻璃材质与更宽松的圆角/间距；新增浅色、深色、跟随系统三态主题，深色首帧不再闪白。
 
-完整软件更新见仓库根目录 [CHANGELOG.md](https://github.com/laochenfei233/HachimoDock-beautiful/blob/main/CHANGELOG.md)。
+### 变更
+
+- **设置页整理**：「外观」与「应用更新」合并进「其他配置」分组，服务凭据类配置保持独立卡片；语音配置拆成「语音识别」「语音合成」两张卡。
+- **上游同步 0.1.245**：合并上游 Devin/Hermes、Wi-Fi 配对、联网检索、OpenAI 兼容语音合成端点（含地址安全校验）、MiMo 中国区 Token Plan、可灵新版 API Key 等能力；产品名统一为 **Hachimodock**，固件基线升至 R292（内置 OTA 覆盖 WiFi6 与 Pico 的 v1/v3 芯片）。
+- 界面配色统一收敛到主题 token，侧边栏、设置页、形象画廊、组件中心与智能家居随深浅色自动切换；开启「减少动态效果」「降低透明度」时自动降级。
+- 品牌形象替换为橙色猫 logo（侧边栏、窗口图标、favicon 全套）。
+
+### 修复
+
+- 修复 Prism 会话切换命令未加入本地权限白名单、调用会被拒绝的问题。
+- 修复 Windows 上 Prism 安装位置识别错误（主程序实际为 `prism-agent.exe`，捆绑 CLI 在安装目录的 `runtime/prism/lib/bin.js`）。
+- 修复天气数据源在取数失败后「等待数据」永久卡住的问题，失败后会正常重试并恢复。
+- 修复同一发布包含多架构安装包时，应用内更新可能选错架构的问题（现按本机架构优先匹配）。
 
 ### 安装包
 
 | 平台 | 文件 | 说明 |
 | --- | --- | --- |
 | Windows x64 | `HachimoDock_0.1.245-rc.1_Windows-x64-setup.exe` | NSIS，未做 Authenticode 签名 |
-| Windows x64 | `HachimoDock_0.1.245-rc.1_x64_en-US.msi` | MSI，版本号回退为基础版本 `0.1.245`（WiX 不接受预发布版本） |
+| Windows x64 | `HachimoDock_0.1.245-rc.1_x64_en-US.msi` | MSI，元数据版本回退为基础版本 `0.1.245`（WiX 不接受预发布版本） |
 | Windows arm64 | `HachimoDock_0.1.245-rc.1_Windows-arm64-setup.exe` | NSIS，arm64 设备 |
 | macOS arm64 | `HachimoDock_0.1.245-rc.1_macOS-arm64.dmg` | Apple silicon，ad-hoc 签名、未公证 |
 | macOS x64 | `HachimoDock_0.1.245-rc.1_macOS-x64.dmg` | Intel，ad-hoc 签名、未公证 |
 | 校验 | `SHA256SUMS` | 上述文件的 SHA-256 |
 
-macOS 包未公证，首次打开需在「系统设置 → 隐私与安全性」中放行。
+macOS 包未公证，首次打开需在「系统设置 → 隐私与安全性」中放行。完整更新日志见仓库 [CHANGELOG.md](https://github.com/laochenfei233/HachimoDock-beautiful/blob/main/CHANGELOG.md)。

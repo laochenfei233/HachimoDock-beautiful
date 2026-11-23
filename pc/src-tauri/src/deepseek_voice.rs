@@ -27,6 +27,15 @@ pub(crate) fn asr_url(base_url: &str) -> String {
     format!("{}/v1/tools/asr", base_url.trim().trim_end_matches('/'))
 }
 
+/// 整段合成请求体：DeepSeek 用 `voice_id` 而不是 `voice`，`pcm` 输出 24 kHz/16 位/单声道。
+pub(crate) fn tts_payload(text: &str, voice: &str) -> serde_json::Value {
+    serde_json::json!({
+        "text": text.trim(),
+        "voice_id": voice_id(voice),
+        "format": "pcm",
+    })
+}
+
 pub struct DeepseekTtsClient {
     pub api_key: String,
     pub base_url: String,
@@ -45,11 +54,7 @@ impl DeepseekTtsClient {
         let clean = text.trim();
         if clean.is_empty() { return Ok(0); }
         let url = tts_url(&self.base_url);
-        let payload = serde_json::json!({
-            "text": clean,
-            "voice_id": voice_id(&self.voice),
-            "format": "pcm",
-        });
+        let payload = tts_payload(clean, &self.voice);
         let client = crate::llm_network::client(REQUEST_TIMEOUT)?;
         let mut response = client.post(&url)
             .bearer_auth(self.api_key.trim())
@@ -115,5 +120,14 @@ mod tests {
     fn tool_endpoints_join_the_preset_host_without_duplicating_slashes() {
         assert_eq!(tts_url("https://api.deepseek.com"), "https://api.deepseek.com/v1/tools/tts");
         assert_eq!(asr_url(" https://api.deepseek.com/ "), "https://api.deepseek.com/v1/tools/asr");
+    }
+
+    #[test]
+    fn tts_payload_matches_the_tools_api_and_falls_back_to_stella() {
+        let payload = tts_payload(" 你好 ", "zh_female_peiqi_uranus_bigtts");
+        assert_eq!(payload["text"], "你好");
+        assert_eq!(payload["voice_id"], "stella");
+        assert_eq!(payload["format"], "pcm");
+        assert_eq!(tts_payload("hi", "tide")["voice_id"], "tide");
     }
 }

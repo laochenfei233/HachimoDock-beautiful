@@ -175,7 +175,7 @@ pub struct VoiceChatSettings {
     pub llm_api_keys: BTreeMap<String, String>,
     pub llm_custom_base_url: String,
     pub llm_web_search: Option<bool>,
-    /// 语音识别服务商："volcengine" | "dashscope" | "mimo" | "custom"（豆包为默认）。
+    /// 语音识别服务商："volcengine" | "dashscope" | "mimo" | "deepseek" | "custom"（豆包为默认）。
     pub asr_provider: String,
     pub asr_model: String,
     /// 仅 custom 服务商使用；预设服务商始终用官方端点。
@@ -187,7 +187,7 @@ pub struct VoiceChatSettings {
     pub tts_api_key: String,
     pub tts_resource_id: String,
     /// 语音合成服务商（可与 ASR 不同，实现跨商组合）：
-    /// "volcengine"（豆包内置）| "dashscope" | "mimo" | "custom"（OpenAI 兼容端点）| "openai"。
+    /// "volcengine"（豆包内置）| "dashscope" | "mimo" | "deepseek" | "custom"（OpenAI 兼容端点）| "openai"。
     #[serde(default = "default_tts_provider")]
     pub tts_provider: String,
     #[serde(default)]
@@ -613,10 +613,6 @@ fn merge_settings(mut settings: VoiceChatSettings, input: VoiceChatSettingsInput
     }
     if let Some(value) = input.tts_resource_id {
         settings.tts_resource_id = value.trim().to_string();
-    }
-    if let Some(value) = input.tts_provider {
-        let v = value.trim();
-        settings.tts_provider = if v == "openai" { "openai".into() } else { "volcengine".into() };
     }
     if let Some(value) = input.tts_base_url {
         settings.tts_base_url = value.trim().to_string();
@@ -1276,11 +1272,25 @@ mod tests {
     }
 
     #[test]
+    fn tts_provider_saves_persist_for_every_preset_instead_of_falling_back_to_doubao() {
+        for provider in ["dashscope", "mimo", "deepseek"] {
+            let saved = merge_settings(VoiceChatSettings::default(), VoiceChatSettingsInput {
+                tts_provider: Some(provider.into()),
+                tts_speech_key: Some("tts-test-key".into()),
+                ..Default::default()
+            });
+            assert_eq!(saved.tts_provider, provider);
+            assert_eq!(speech_key(&saved, provider, "").as_deref(), Some("tts-test-key"));
+        }
+    }
+
+    #[test]
     fn voice_provider_aliases_resolve_and_unknown_follows_global() {
         assert_eq!(normalize_voice_provider(""), None);
         assert_eq!(normalize_voice_provider("doubao_tts").as_deref(), Some("volcengine"));
         assert_eq!(normalize_voice_provider("Dashscope_TTS ").as_deref(), Some("dashscope"));
         assert_eq!(normalize_voice_provider("mimo_tts").as_deref(), Some("mimo"));
+        assert_eq!(normalize_voice_provider("deepseek_tts").as_deref(), Some("deepseek"));
         assert_eq!(normalize_voice_provider("custom_tts").as_deref(), Some("custom"));
         assert_eq!(normalize_voice_provider("bogus_tts"), None);
     }

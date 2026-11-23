@@ -2,7 +2,8 @@
  * [Input] OpenAI 兼容音频端点（POST /audio/speech、POST /audio/transcriptions）的
  *         baseUrl/Key/模型/音色配置；通用自定义语音服务商与小米 MiMo 预设都经此适配器。
  * [Output] TTS：PCM 流式回调（假设线端 24 kHz，重采样为 16 kHz 单声道 S16LE）；
- *          ASR：整轮 PCM 加 WAV 头一次性 multipart 上传，只返回最终文本。
+ *          ASR：整轮 PCM 加 WAV 头一次性 multipart 上传，只返回最终文本。上传与重采样同时供
+ *          DeepSeek 适配器复用（`deepseek_voice.rs`）。
  *          shortcut: 假设 /audio/speech 的 pcm 响应固定 24 kHz（OpenAI 规范），非 24 kHz
  *          的兼容服务商会音调偏移；出现这类服务商时把采样率放进服务商配置。
  * [Pos] TTS/ASR 适配器 in pc/src-tauri/src。
@@ -302,6 +303,15 @@ mod tests {
         let suffix = format!("\r\n--{boundary}--\r\n");
         assert!(body.ends_with(suffix.as_bytes()));
         assert!(body[..body.len() - suffix.len()].ends_with(&[7, 8]));
+    }
+
+    #[test]
+    fn empty_fields_produce_a_file_only_multipart_form() {
+        let (boundary, body) = multipart_body(&[], "audio.wav", "audio/wav", &[9, 9]);
+        let text = String::from_utf8_lossy(&body).to_string();
+        assert!(text.starts_with(&format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\";")));
+        assert!(!text.contains("name=\"model\""));
+        assert!(text.ends_with(&format!("\r\n--{boundary}--\r\n")));
     }
 
     #[test]

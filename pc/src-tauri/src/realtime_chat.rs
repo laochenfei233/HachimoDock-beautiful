@@ -76,7 +76,7 @@ const PREVIEW_MAX_SECONDS: u64 = 20;
 pub struct VoiceSpec {
     pub speaker: String,
     pub clone_speaker_id: String,
-    /// 形象级 TTS 服务商覆盖（"" = 跟随全局；doubao_tts / dashscope_tts / mimo_tts / custom_tts）。
+    /// 形象级 TTS 服务商覆盖（"" = 跟随全局；doubao_tts / dashscope_tts / mimo_tts / deepseek_tts / custom_tts）。
     #[serde(default)]
     pub provider: String,
     pub speed: f32,

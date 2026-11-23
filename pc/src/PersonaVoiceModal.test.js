@@ -2,7 +2,7 @@
  * [Input] PersonaVoiceModal source and shared stylesheet.
  * [Output] Static coverage for the 人设与声音 modal: persona fields with templates, a per-appearance
  *          TTS provider select with provider-aware voice pickers (Doubao catalog, DashScope presets,
- *          MiMo/custom free text), v1→v2 provider migration, validation, required (post-creation) mode,
+ *          DeepSeek presets, MiMo/custom free text), v1→v2 provider migration, validation, required (post-creation) mode,
  *          factory reset for the built-in Terrier, and the preview gate.
  * [Pos] test node in ref/src
  * [Sync] If this file changes, update `ref/src/.folder.md`.
@@ -41,7 +41,8 @@ test("voice section gains a 合成服务商 select with provider-aware voice pic
   assert.match(source, /跟随全局/);
   assert.match(source, /voiceSectionSubtitle/);
   assert.match(source, /voiceOptionsFor\(form\.voice\.provider/);
-  assert.match(source, /resolvedTtsProviderId === "dashscope"/, "dashscope gets preset voices plus free text");
+  assert.match(source, /resolvedTtsProviderId === "dashscope"/, "dashscope keeps the free-text voice id");
+  assert.match(source, /providerVoiceOptions\.length > 0/, "any provider with preset voices gets the picker");
   assert.match(source, /填写服务商的音色 ID 或描述/, "mimo/custom get free-text voice input");
   assert.match(source, /\(voices\[0\] \|\| ""\)/, "switching to a preset provider defaults an empty speaker");
   assert.match(source, /isDoubaoVoice \?[\s\S]*?复刻音色 ID/, "clone input stays in the Doubao branch only");

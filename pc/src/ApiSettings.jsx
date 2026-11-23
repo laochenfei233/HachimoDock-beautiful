@@ -860,9 +860,9 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                     {ttsVoiceChoices.map((voice) => (
                       <option key={voice} value={voice}>{voice}</option>
                     ))}
-                    <option value="__custom__">自定义…</option>
+                    {speech.ttsProvider === "dashscope" && <option value="__custom__">自定义…</option>}
                   </select>
-                  {!ttsVoiceChoices.includes(speech.ttsVoice) && (
+                  {speech.ttsProvider === "dashscope" && !ttsVoiceChoices.includes(speech.ttsVoice) && (
                     <input
                       id="api-settings-tts-voice-custom"
                       className="ui-control"

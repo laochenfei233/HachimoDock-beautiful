@@ -171,6 +171,10 @@ test("speech cards split recognition and synthesis with independent provider row
   assert.match(source, /speech\.ttsConfigured \? 1 : 0/);
   assert.match(source, /VIDEO_PROVIDERS\.length \+ 3/);
   assert.doesNotMatch(source, /title="语音识别与合成"/);
+  // DeepSeek 的语音接口没有模型参数（界面不渲染模型输入），合成音色来自预设 voices。
+  assert.match(source, /speech\.asrProvider !== "deepseek" && \(/);
+  assert.match(source, /speech\.ttsProvider !== "deepseek" && \(/);
+  assert.match(source, /ttsVoiceChoices\.length > 0/);
 });
 
 test("speech provider presets supply per-service defaults", () => {

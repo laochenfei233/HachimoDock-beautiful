@@ -4,9 +4,9 @@
  *         `lib/persona-voice.js`.
  * [Output] The 人设与声音 modal: persona form (name, intro, style, address, language,
  *          forbidden, greeting) with one-tap templates, a per-appearance TTS provider select
- *          (follow global / Doubao / DashScope / MiMo / custom) with provider-aware voice pickers
+ *          (follow global / Doubao / DashScope / MiMo / DeepSeek / custom) with provider-aware voice pickers
  *          (Doubao catalog with language groups/search or a cloned speaker id; DashScope preset
- *          voices plus free text; MiMo/custom free text; speed, volume), validation, save via
+ *          voices plus free text; DeepSeek preset voices; MiMo/custom free text; speed, volume), validation, save via
  *          `savePersonaVoice`, a "restore factory persona" action for the built-in Terrier,
  *          current-key chat instructions, API navigation without discarding drafts,
  *          shared realtime volume with native persistence, and a preview button that refreshes after speech configuration changes.
@@ -160,12 +160,13 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
     setErrors((current) => (current.speaker ? { ...current, speaker: undefined } : current));
   }, []);
 
-  // 切换形象级服务商：切到有预设音色的服务商且音色为空时，填入第一个预设音色。
+  // 切换形象级服务商：目标服务商有预设音色且当前音色不属于它时，改用第一个预设音色。
   const changeVoiceProvider = useCallback((providerId) => {
     setForm((current) => {
       const preset = TTS_PROVIDER_PRESETS.find((item) => item.id === (providerId ? providerId.replace(/_tts$/, "") : ""));
       const voices = preset?.voices || [];
-      const speaker = providerId && providerId !== TTS_PROVIDER_DOUBAO && !current.voice.speaker.trim()
+      const speaker = providerId && providerId !== TTS_PROVIDER_DOUBAO
+        && (voices.length === 0 ? !current.voice.speaker.trim() : !voices.includes(current.voice.speaker.trim()))
         ? (voices[0] || "")
         : current.voice.speaker;
       return { ...current, voice: { ...current.voice, provider: providerId, speaker } };
@@ -434,7 +435,7 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
                     />
                   </label>
                 </>
-              ) : resolvedTtsProviderId === "dashscope" ? (
+              ) : providerVoiceOptions.length > 0 ? (
                 <label className="ui-field">
                   <span className="ui-field__label">音色</span>
                   <select
@@ -448,13 +449,15 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
                       <option key={option.id} value={option.id}>{option.label}</option>
                     ))}
                   </select>
-                  <input
-                    className="field-input"
-                    value={form.voice.speaker}
-                    onChange={(event) => updateVoice("speaker", event.target.value)}
-                    placeholder="也可直接填写服务商的音色 ID"
-                    disabled={saving}
-                  />
+                  {resolvedTtsProviderId === "dashscope" && (
+                    <input
+                      className="field-input"
+                      value={form.voice.speaker}
+                      onChange={(event) => updateVoice("speaker", event.target.value)}
+                      placeholder="也可直接填写服务商的音色 ID"
+                      disabled={saving}
+                    />
+                  )}
                   {errors.speaker && <span className="ui-field__error">{errors.speaker}</span>}
                 </label>
               ) : (

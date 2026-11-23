@@ -54,7 +54,7 @@ export function speakerOptionsFor(currentSpeaker = "", query = "") {
 
 /**
  * 音色选项按已解析的合成服务商返回：豆包（或跟随全局的豆包）走官方目录；
- * dashscope 用预设音色（保留不在预设里的当前值）；mimo/custom 无预设，由 UI 自由填写。
+ * dashscope / deepseek 用预设音色（保留不在预设里的当前值）；mimo/custom 无预设，由 UI 自由填写。
  */
 export function voiceOptionsFor(providerId, currentVoice = "", query = "") {
   const id = text(providerId);

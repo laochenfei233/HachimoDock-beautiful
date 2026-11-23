@@ -52,6 +52,12 @@ export function speakerOptionsFor(currentSpeaker = "", query = "") {
   return matches;
 }
 
+/** 该服务商预设的音色 id 列表（空表示只能自由填写，例如 MiMo / 自定义）。 */
+export function presetVoicesFor(providerId) {
+  const id = text(providerId).replace(/_tts$/, "");
+  return TTS_PROVIDER_PRESETS.find((item) => item.id === id)?.voices || [];
+}
+
 /**
  * 音色选项按已解析的合成服务商返回：豆包（或跟随全局的豆包）走官方目录；
  * dashscope / deepseek 用预设音色（保留不在预设里的当前值）；mimo/custom 无预设，由 UI 自由填写。
@@ -59,8 +65,7 @@ export function speakerOptionsFor(currentSpeaker = "", query = "") {
 export function voiceOptionsFor(providerId, currentVoice = "", query = "") {
   const id = text(providerId);
   if (!id || id === TTS_PROVIDER_DOUBAO) return speakerOptionsFor(currentVoice, query);
-  const preset = TTS_PROVIDER_PRESETS.find((item) => item.id === id.replace(/_tts$/, ""));
-  const voices = preset?.voices || [];
+  const voices = presetVoicesFor(id);
   const needle = query.trim().toLocaleLowerCase();
   const current = text(currentVoice);
   const options = voices

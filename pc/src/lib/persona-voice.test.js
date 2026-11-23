@@ -25,6 +25,7 @@ import {
   markPersonaSetupPending,
   normalizePersonaVoice,
   personaSummaryLabel,
+  presetVoicesFor,
   validatePersonaVoice,
   voiceOptionsFor,
   voiceSpecFor,
@@ -153,6 +154,12 @@ test("voiceSpecFor carries the provider and voice options follow the resolved pr
   assert.equal(dashscopeCustom[0].id, "my-voice");
   assert.equal(dashscopeCustom.length, 7);
   assert.deepEqual(voiceOptionsFor("mimo_tts"), []);
+  // 自由填写的服务商也会把当前值补进选项列表——UI 不能据此判断「有预设音色」。
+  assert.deepEqual(voiceOptionsFor("mimo_tts", "female"), [{ id: "female", label: "female" }]);
+  assert.deepEqual(presetVoicesFor("mimo_tts"), []);
+  assert.deepEqual(presetVoicesFor("custom_tts"), []);
+  assert.deepEqual(presetVoicesFor("deepseek_tts"), ["stella", "tide"]);
+  assert.equal(presetVoicesFor("dashscope_tts").length, 6);
   assert.deepEqual(voiceOptionsFor("deepseek_tts").map((option) => option.id), ["stella", "tide"]);
   assert.deepEqual(voiceOptionsFor("custom_tts", "warm voice"), [{ id: "warm voice", label: "warm voice" }]);
 });

@@ -42,7 +42,10 @@ test("voice section gains a 合成服务商 select with provider-aware voice pic
   assert.match(source, /voiceSectionSubtitle/);
   assert.match(source, /voiceOptionsFor\(form\.voice\.provider/);
   assert.match(source, /resolvedTtsProviderId === "dashscope"/, "dashscope keeps the free-text voice id");
-  assert.match(source, /providerVoiceOptions\.length > 0/, "any provider with preset voices gets the picker");
+  assert.match(source, /presetVoicesFor\(resolvedTtsProviderId\)/, "the picker gate reads preset voices, not the augmented option list");
+  assert.match(source, /presetVoiceOptions\.length > 0/, "only providers with preset voices get the picker");
+  assert.doesNotMatch(source, /providerVoiceOptions\.length > 0/, "a free-text provider must not fall into the preset picker");
+  assert.match(source, /providerId === "deepseek_tts"/, "switching to DeepSeek normalizes the speaker to a real voice id");
   assert.match(source, /填写服务商的音色 ID 或描述/, "mimo/custom get free-text voice input");
   assert.match(source, /\(voices\[0\] \|\| ""\)/, "switching to a preset provider defaults an empty speaker");
   assert.match(source, /isDoubaoVoice \?[\s\S]*?复刻音色 ID/, "clone input stays in the Doubao branch only");

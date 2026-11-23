@@ -34,6 +34,7 @@ import {
   VOICE_VOLUME_RANGE,
   createDefaultPersonaVoice,
   normalizePersonaVoice,
+  presetVoicesFor,
   previewTextFor,
   speakerOptionsFor,
   validatePersonaVoice,
@@ -149,6 +150,11 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
     () => voiceOptionsFor(form.voice.provider, form.voice.speaker),
     [form.voice.provider, form.voice.speaker],
   );
+  // 只有「服务商自带预设音色」才显示下拉；voiceOptionsFor 会把当前值补进列表，不能拿长度判断。
+  const presetVoiceOptions = useMemo(
+    () => presetVoicesFor(resolvedTtsProviderId).map((voice) => ({ id: voice, label: voice })),
+    [resolvedTtsProviderId],
+  );
 
   const updatePersona = useCallback((key, value) => {
     setForm((current) => ({ ...current, persona: { ...current.persona, [key]: value } }));
@@ -160,13 +166,15 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
     setErrors((current) => (current.speaker ? { ...current, speaker: undefined } : current));
   }, []);
 
-  // 切换形象级服务商：目标服务商有预设音色且当前音色不属于它时，改用第一个预设音色。
+  // 切换形象级服务商：目标服务商有预设音色且不能自由填写时（DeepSeek），收敛到第一个预设音色；
+  // 其他服务商保留用户当前值（dashscope 允许自由音色 id）。
   const changeVoiceProvider = useCallback((providerId) => {
     setForm((current) => {
       const preset = TTS_PROVIDER_PRESETS.find((item) => item.id === (providerId ? providerId.replace(/_tts$/, "") : ""));
       const voices = preset?.voices || [];
+      const fixedVoice = providerId === "deepseek_tts";
       const speaker = providerId && providerId !== TTS_PROVIDER_DOUBAO
-        && (voices.length === 0 ? !current.voice.speaker.trim() : !voices.includes(current.voice.speaker.trim()))
+        && (fixedVoice ? !voices.includes(current.voice.speaker.trim()) : !current.voice.speaker.trim())
         ? (voices[0] || "")
         : current.voice.speaker;
       return { ...current, voice: { ...current.voice, provider: providerId, speaker } };
@@ -435,7 +443,7 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
                     />
                   </label>
                 </>
-              ) : providerVoiceOptions.length > 0 ? (
+              ) : presetVoiceOptions.length > 0 ? (
                 <label className="ui-field">
                   <span className="ui-field__label">音色</span>
                   <select
@@ -445,7 +453,7 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
                     disabled={saving}
                   >
                     {!form.voice.speaker && <option value="">未选择</option>}
-                    {providerVoiceOptions.map((option) => (
+                    {(resolvedTtsProviderId === "dashscope" ? providerVoiceOptions : presetVoiceOptions).map((option) => (
                       <option key={option.id} value={option.id}>{option.label}</option>
                     ))}
                   </select>

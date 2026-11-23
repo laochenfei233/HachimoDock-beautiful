@@ -69,6 +69,8 @@ export const ASR_PROVIDER_PRESETS = [
   { id: "volcengine", label: "豆包", model: "volc.seedasr.sauc.duration" },
   { id: "dashscope", label: "通义千问", baseUrl: "https://dashscope.aliyuncs.com", model: "qwen3-asr-flash" },
   { id: "mimo", label: "MiMo", baseUrl: "https://api.xiaomimimo.com/v1", model: "mimo-v2.5-asr" },
+  // DeepSeek 语音工具接口没有模型参数（语种自动识别），模型字段留空且界面不展示。
+  { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com", model: "" },
   { id: "custom", label: "自定义", model: "" },
 ];
 
@@ -78,6 +80,7 @@ export const TTS_PROVIDER_PRESETS = [
   { id: "dashscope", label: "通义千问", baseUrl: "https://dashscope.aliyuncs.com", model: "cosyvoice-v3-flash",
     voices: ["longxiaochun_v3", "longshu_v3", "longanrou_v3", "longshange_v3", "longanxuan_v3", "longlaotie_v3"] },
   { id: "mimo", label: "MiMo", baseUrl: "https://api.xiaomimimo.com/v1", model: "mimo-v2.5-tts", voices: [] },
+  { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com", model: "", voices: ["stella", "tide"] },
   { id: "custom", label: "自定义", model: "", voices: [] },
 ];
 

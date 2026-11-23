@@ -92,6 +92,7 @@ test("schema v2 keeps explicit providers; legacy v1 docs coerce doubao_tts to fo
     { id: "doubao_tts", label: "豆包" },
     { id: "dashscope_tts", label: "通义千问" },
     { id: "mimo_tts", label: "MiMo" },
+    { id: "deepseek_tts", label: "DeepSeek" },
     { id: "custom_tts", label: "自定义" },
   ]);
   const v2 = normalizePersonaVoice(
@@ -152,6 +153,7 @@ test("voiceSpecFor carries the provider and voice options follow the resolved pr
   assert.equal(dashscopeCustom[0].id, "my-voice");
   assert.equal(dashscopeCustom.length, 7);
   assert.deepEqual(voiceOptionsFor("mimo_tts"), []);
+  assert.deepEqual(voiceOptionsFor("deepseek_tts").map((option) => option.id), ["stella", "tide"]);
   assert.deepEqual(voiceOptionsFor("custom_tts", "warm voice"), [{ id: "warm voice", label: "warm voice" }]);
 });
 

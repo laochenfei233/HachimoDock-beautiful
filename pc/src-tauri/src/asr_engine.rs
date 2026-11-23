@@ -48,16 +48,23 @@ pub fn create(callback: impl Fn(StreamingSpeechEvent) + Send + Sync + 'static)
             }),
             callback,
         ))),
+        "deepseek" => Ok(Box::new(OneShotAsr::start(
+            Transcriber::Deepseek(crate::deepseek_voice::DeepseekAsrConfig {
+                base_url: config.base_url, api_key: config.api_key,
+            }),
+            callback,
+        ))),
         other => Err(format!("不支持的语音识别服务商：{other}")),
     }
 }
 
-/// 一次性转写的两种请求形态：标准 multipart /audio/transcriptions，或
-/// Chat Completions input_audio（MiMo / 通义千问 qwen3-asr）。
+/// 一次性转写的三种请求形态：标准 multipart /audio/transcriptions、Chat Completions
+/// input_audio（MiMo / 通义千问 qwen3-asr），或 DeepSeek 的 /v1/tools/asr multipart。
 #[derive(Clone)]
 enum Transcriber {
     OpenAi(crate::openai_audio::OpenAiAsrConfig),
     Chat(crate::mimo_tts::ChatAsrConfig),
+    Deepseek(crate::deepseek_voice::DeepseekAsrConfig),
 }
 
 /// 通义千问 ASR 模型 → 协议：qwen3-asr 系走 HTTP Chat 一次性，paraformer 系走 WS 流式。
@@ -107,6 +114,7 @@ impl OneShotAsr {
             let result = match &transcriber {
                 Transcriber::OpenAi(config) => crate::openai_audio::transcribe(config, &pcm).await,
                 Transcriber::Chat(config) => crate::mimo_tts::transcribe(config, &pcm).await,
+                Transcriber::Deepseek(config) => crate::deepseek_voice::transcribe(config, &pcm).await,
             };
             let text = match result {
                 Ok(text) => text,

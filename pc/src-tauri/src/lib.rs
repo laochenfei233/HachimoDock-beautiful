@@ -176,6 +176,7 @@ mod openai_audio;
 mod dashscope_tts;
 mod mimo_tts;
 mod dashscope_asr;
+mod deepseek_voice;
 mod asr_engine;
 
 use serde::{Deserialize, Serialize};

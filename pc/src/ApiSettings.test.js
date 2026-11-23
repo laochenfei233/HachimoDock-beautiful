@@ -178,28 +178,31 @@ test("speech provider presets supply per-service defaults", () => {
     { id: "volcengine", label: "豆包", model: "volc.seedasr.sauc.duration" },
     { id: "dashscope", label: "通义千问", model: "qwen3-asr-flash" },
     { id: "mimo", label: "MiMo", model: "mimo-v2.5-asr" },
+    { id: "deepseek", label: "DeepSeek", model: "" },
     { id: "custom", label: "自定义", model: "" },
   ]);
   assert.deepEqual(TTS_PROVIDER_PRESETS.map(({ id, label, model, voice }) => ({ id, label, model, voice })), [
     { id: "volcengine", label: "豆包", model: "seed-tts-2.0-standard", voice: "" },
     { id: "dashscope", label: "通义千问", model: "cosyvoice-v3-flash", voice: undefined },
     { id: "mimo", label: "MiMo", model: "mimo-v2.5-tts", voice: undefined },
+    { id: "deepseek", label: "DeepSeek", model: "", voice: undefined },
     { id: "custom", label: "自定义", model: "", voice: undefined },
   ]);
   assert.equal(TTS_PROVIDER_PRESETS[1].voices[0], "longxiaochun_v3");
   assert.equal(TTS_PROVIDER_PRESETS[1].voices.length, 6);
+  assert.deepEqual(TTS_PROVIDER_PRESETS.find((preset) => preset.id === "deepseek").voices, ["stella", "tide"]);
   assert.equal(speechCredentialScope("dashscope"), "dashscope");
   assert.equal(speechCredentialScope("custom", " https://one.invalid/v1/ "), "custom:https://one.invalid/v1");
   assert.equal(speechCredentialScope("custom", ""), "custom:(未填写接口地址)");
 });
 
 test("switching speech providers clears the draft key and restores their own scope masks", () => {
-  const masks = { volcengine: "vb…0001", dashscope: "ds…0002", mimo: "mi…0003",
+  const masks = { volcengine: "vb…0001", dashscope: "ds…0002", mimo: "mi…0003", deepseek: "dk…0006",
     "custom:https://one.invalid/v1": "one…0004", "custom:https://two.invalid/v1": "two…0005" };
   const asr = { asrProvider: "dashscope", asrBaseUrl: "https://dashscope.aliyuncs.com", asrModel: "old-model",
     asrApiKey: "unsaved-draft", asrApiKeyMasked: "ds…0002", asrApiKeyMasks: masks, asrConfigured: true,
     asrTone: "success", asrMessage: "已配置" };
-  for (const provider of ["volcengine", "mimo", "custom"]) {
+  for (const provider of ["volcengine", "mimo", "deepseek", "custom"]) {
     const next = selectAsrProvider(asr, provider);
     if (provider === "custom") {
       assert.equal(next.asrBaseUrl, "", "custom starts from the remembered custom endpoint");

@@ -84,8 +84,6 @@ function resultToneClass(tone) {
   return tone ? ` is-${tone}` : "";
 }
 
-const DASHSCOPE_TTS_VOICES = TTS_PROVIDER_PRESETS.find((preset) => preset.id === "dashscope")?.voices || [];
-
 const THEME_OPTIONS = [
   { id: "auto", label: "跟随系统" },
   { id: "light", label: "浅色" },
@@ -605,6 +603,9 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
     }
   };
 
+  // 服务商预设了音色列表就用下拉框（通义千问 / DeepSeek），否则自由填写。
+  const ttsVoiceChoices = TTS_PROVIDER_PRESETS.find((preset) => preset.id === speech.ttsProvider)?.voices || [];
+
   return (
     <div className="api-settings-page">
     <PageShell
@@ -726,22 +727,24 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                 />
               </label>
             )}
-            <label className="ui-field" htmlFor="api-settings-asr-model">
-              <span className="ui-field__label">模型名称</span>
-              <input
-                id="api-settings-asr-model"
-                className="ui-control"
-                value={speech.asrModel}
-                onChange={(event) => setSpeech((current) => ({ ...current, asrModel: event.target.value }))}
-                placeholder={ASR_PROVIDER_PRESETS.find((preset) => preset.id === speech.asrProvider)?.model || "填写服务商的识别模型"}
-                disabled={speech.asrPending || speech.loading}
-              />
-              <span className="muted small">
-                {speech.asrProvider === "dashscope"
-                  ? "二选一：qwen3-asr-flash 走 HTTP 一次性识别（说完出全文）；paraformer-realtime-v2 走 WebSocket 流式（边说边出字幕）。"
-                  : "已按服务商填入默认模型，可改为账号已开通的模型。"}
-              </span>
-            </label>
+            {speech.asrProvider !== "deepseek" && (
+              <label className="ui-field" htmlFor="api-settings-asr-model">
+                <span className="ui-field__label">模型名称</span>
+                <input
+                  id="api-settings-asr-model"
+                  className="ui-control"
+                  value={speech.asrModel}
+                  onChange={(event) => setSpeech((current) => ({ ...current, asrModel: event.target.value }))}
+                  placeholder={ASR_PROVIDER_PRESETS.find((preset) => preset.id === speech.asrProvider)?.model || "填写服务商的识别模型"}
+                  disabled={speech.asrPending || speech.loading}
+                />
+                <span className="muted small">
+                  {speech.asrProvider === "dashscope"
+                    ? "二选一：qwen3-asr-flash 走 HTTP 一次性识别（说完出全文）；paraformer-realtime-v2 走 WebSocket 流式（边说边出字幕）。"
+                    : "已按服务商填入默认模型，可改为账号已开通的模型。"}
+                </span>
+              </label>
+            )}
             <label className="ui-field" htmlFor="api-settings-asr-speech-key">
               <span className="ui-field__label">API Key</span>
               <input
@@ -826,38 +829,40 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                 />
               </label>
             )}
-            <label className="ui-field" htmlFor="api-settings-tts-model">
-              <span className="ui-field__label">模型名称</span>
-              <input
-                id="api-settings-tts-model"
-                className="ui-control"
-                value={speech.ttsModel}
-                onChange={(event) => setSpeech((current) => ({ ...current, ttsModel: event.target.value }))}
-                placeholder={TTS_PROVIDER_PRESETS.find((preset) => preset.id === speech.ttsProvider)?.model || "填写服务商的合成模型"}
-                disabled={speech.ttsPending || speech.loading}
-              />
-              <span className="muted small">已按服务商填入默认模型，可改为账号已开通的模型。</span>
-            </label>
+            {speech.ttsProvider !== "deepseek" && (
+              <label className="ui-field" htmlFor="api-settings-tts-model">
+                <span className="ui-field__label">模型名称</span>
+                <input
+                  id="api-settings-tts-model"
+                  className="ui-control"
+                  value={speech.ttsModel}
+                  onChange={(event) => setSpeech((current) => ({ ...current, ttsModel: event.target.value }))}
+                  placeholder={TTS_PROVIDER_PRESETS.find((preset) => preset.id === speech.ttsProvider)?.model || "填写服务商的合成模型"}
+                  disabled={speech.ttsPending || speech.loading}
+                />
+                <span className="muted small">已按服务商填入默认模型，可改为账号已开通的模型。</span>
+              </label>
+            )}
             <label className="ui-field" htmlFor="api-settings-tts-voice">
               <span className="ui-field__label">默认音色</span>
-              {speech.ttsProvider === "dashscope" ? (
+              {ttsVoiceChoices.length > 0 ? (
                 <>
                   <select
                     id="api-settings-tts-voice"
                     className="ui-control"
-                    value={DASHSCOPE_TTS_VOICES.includes(speech.ttsVoice) ? speech.ttsVoice : "__custom__"}
+                    value={ttsVoiceChoices.includes(speech.ttsVoice) ? speech.ttsVoice : "__custom__"}
                     onChange={(event) => setSpeech((current) => ({
                       ...current,
                       ttsVoice: event.target.value === "__custom__" ? "" : event.target.value,
                     }))}
                     disabled={speech.ttsPending || speech.loading}
                   >
-                    {DASHSCOPE_TTS_VOICES.map((voice) => (
+                    {ttsVoiceChoices.map((voice) => (
                       <option key={voice} value={voice}>{voice}</option>
                     ))}
                     <option value="__custom__">自定义…</option>
                   </select>
-                  {!DASHSCOPE_TTS_VOICES.includes(speech.ttsVoice) && (
+                  {!ttsVoiceChoices.includes(speech.ttsVoice) && (
                     <input
                       id="api-settings-tts-voice-custom"
                       className="ui-control"

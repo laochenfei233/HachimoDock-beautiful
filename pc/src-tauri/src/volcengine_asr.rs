@@ -825,6 +825,7 @@ fn global_provider_label() -> &'static str {
     match crate::voice_chat_settings::global_asr_provider().as_deref() {
         Ok("dashscope") => "dashscope",
         Ok("mimo") => "mimo",
+        Ok("deepseek") => "deepseek",
         Ok("custom") => "custom",
         _ => "volcengine",
     }

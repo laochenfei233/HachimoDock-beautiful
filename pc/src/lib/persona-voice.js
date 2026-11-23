@@ -24,6 +24,7 @@ export const TTS_VOICE_PROVIDERS = Object.freeze([
   { id: "doubao_tts", label: "豆包" },
   { id: "dashscope_tts", label: "通义千问" },
   { id: "mimo_tts", label: "MiMo" },
+  { id: "deepseek_tts", label: "DeepSeek" },
   { id: "custom_tts", label: "自定义" },
 ]);
 

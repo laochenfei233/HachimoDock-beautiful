@@ -1,6 +1,6 @@
 /*
  * [Input] 对话大模型（DeepSeek / 豆包 / MiMo 预设或自定义 OpenAI 兼容端点）、语音识别与合成的
- *         服务商（豆包 / 通义千问 DashScope / 小米 MiMo / 自定义 OpenAI 兼容）凭据；
+ *         服务商（豆包 / 通义千问 DashScope / 小米 MiMo / DeepSeek / 自定义 OpenAI 兼容）凭据；
  *         豆包语音 Key 仍存于 volcengine_asr 凭据库，其他服务商按 provider scope 存于本文件。
  * [Output] One authenticated encrypted JSON file under the app data dir (`voice-chat-settings.json`,
  *          local private key on macOS / OS vault on Windows, 0600 on unix), masked status for the UI, and resolved LLM/TTS/ASR configs for the realtime chat
@@ -128,6 +128,8 @@ pub const SPEECH_PRESETS: &[SpeechPreset] = &[
     SpeechPreset { id: "volcengine", label: "豆包（火山引擎）", base_url: "", asr_model: "volc.seedasr.sauc.duration", tts_model: "seed-tts-2.0-standard", tts_voice: "" },
     SpeechPreset { id: "dashscope", label: "通义千问（百炼）", base_url: "https://dashscope.aliyuncs.com", asr_model: "qwen3-asr-flash", tts_model: "cosyvoice-v3-flash", tts_voice: "longxiaochun_v3" },
     SpeechPreset { id: "mimo", label: "小米 MiMo", base_url: "https://api.xiaomimimo.com/v1", asr_model: "mimo-v2.5-asr", tts_model: "mimo-v2.5-tts", tts_voice: "" },
+    // DeepSeek 语音工具接口没有模型参数；音色只有 stella / tide。
+    SpeechPreset { id: "deepseek", label: "DeepSeek", base_url: "https://api.deepseek.com", asr_model: "", tts_model: "", tts_voice: "stella" },
 ];
 pub const DEFAULT_SPEECH_PROVIDER: &str = "volcengine";
 
@@ -874,6 +876,11 @@ pub fn tts_engine_with_cache_key(voice_provider: Option<&str>, speaker: &str, cl
             let engine = Box::new(crate::mimo_tts::MimoTtsClient::new(
                 key, base, model.clone(), voice.clone(),
             ));
+            Ok(TtsEngineSetup { engine, cache_key: news_pcm16_v2_key(&provider, &model, &voice, speed) })
+        },
+        "deepseek" => {
+            let voice = crate::deepseek_voice::voice_id(&effective_tts_voice(speaker, &settings.tts_voice)).to_string();
+            let engine = Box::new(crate::deepseek_voice::DeepseekTtsClient::new(key, base, voice.clone()));
             Ok(TtsEngineSetup { engine, cache_key: news_pcm16_v2_key(&provider, &model, &voice, speed) })
         },
         "custom" => {

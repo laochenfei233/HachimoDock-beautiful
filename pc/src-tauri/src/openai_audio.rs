@@ -180,12 +180,6 @@ pub struct OpenAiAsrConfig {
 /// 整轮 PCM（16 kHz 单声道 S16LE）加 WAV 头后一次性转写；只有最终文本，没有部分结果。
 pub async fn transcribe(cfg: &OpenAiAsrConfig, pcm_16k: &[u8]) -> Result<String, String> {
     if pcm_16k.is_empty() { return Ok(String::new()); }
-    let pcm = if pcm_16k.len() > MAX_TRANSCRIBE_PCM_BYTES {
-        &pcm_16k[..MAX_TRANSCRIBE_PCM_BYTES]
-    } else {
-        pcm_16k
-    };
-    let url = transcriptions_url(&cfg.base_url);
     let mut fields: Vec<(String, String)> = vec![
         ("model".into(), cfg.model.trim().to_string()),
         ("response_format".into(), "json".into()),
@@ -193,10 +187,21 @@ pub async fn transcribe(cfg: &OpenAiAsrConfig, pcm_16k: &[u8]) -> Result<String,
     if let Some(language) = cfg.language.as_deref().filter(|l| !l.trim().is_empty()) {
         fields.push(("language".into(), language.trim().to_string()));
     }
-    let (boundary, body) = multipart_body(&fields, "audio.wav", "audio/wav", &wav_wrap(pcm));
+    upload_transcription(&transcriptions_url(&cfg.base_url), &cfg.api_key, &fields, pcm_16k).await
+}
+
+/// multipart 上传整轮音频并解析 `{"text": ...}`；DeepSeek ASR 等无模型/语种字段的端点传空 fields。
+pub(crate) async fn upload_transcription(url: &str, api_key: &str, fields: &[(String, String)], pcm_16k: &[u8])
+    -> Result<String, String> {
+    let pcm = if pcm_16k.len() > MAX_TRANSCRIBE_PCM_BYTES {
+        &pcm_16k[..MAX_TRANSCRIBE_PCM_BYTES]
+    } else {
+        pcm_16k
+    };
+    let (boundary, body) = multipart_body(fields, "audio.wav", "audio/wav", &wav_wrap(pcm));
     let client = crate::llm_network::client(REQUEST_TIMEOUT)?;
-    let response = client.post(&url)
-        .bearer_auth(cfg.api_key.trim())
+    let response = client.post(url)
+        .bearer_auth(api_key.trim())
         .header("Content-Type", format!("multipart/form-data; boundary={boundary}"))
         .body(body)
         .send().await.map_err(|e| crate::llm_network::connection_error(&e))?;
@@ -245,7 +250,7 @@ fn multipart_body(fields: &[(String, String)], filename: &str, mime: &str, file:
     (boundary, body)
 }
 
-async fn read_limited_body(response: reqwest::Response, limit: usize) -> String {
+pub(crate) async fn read_limited_body(response: reqwest::Response, limit: usize) -> String {
     read_limited_body_from(response, limit).await.replace('\n', " ")
 }
 

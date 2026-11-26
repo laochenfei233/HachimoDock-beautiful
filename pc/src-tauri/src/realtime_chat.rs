@@ -27,7 +27,7 @@ use tokio::sync::mpsc;
 use tokio::time::timeout;
 
 use crate::asr_engine;
-use crate::doubao_tts::scale_pcm16;
+use crate::doubao_tts::{scale_pcm16, DoubaoTtsClient};
 use crate::persona_llm::{self, ChatTurn, SentenceSplitter};
 use crate::speech::{SpeechRecognizer, StreamingSpeechEvent, TtsEngine};
 use crate::usb_serial::{UsbConnectionStatus, UsbSerialManager};
@@ -1393,6 +1393,7 @@ async fn run_session(
             return;
         }
     };
+    let mut tts = DoubaoTtsClient::new(tts_cfg);
     let player = spawn_player(usb.clone(), board.clone(), session.clone());
     let duplex = session.duplex.load(Ordering::SeqCst);
     let mut vad = Vad::new();
@@ -1667,7 +1668,7 @@ async fn run_session(
                             }
                             let final_result = match final_asr.take() {
                                 Some(text) => Ok(text),
-                                None => wait_for_asr_final(&rec, &mut events, latest_asr.clone(),
+                                None => wait_for_asr_final(rec.final_wait_budget(), &mut events, latest_asr.clone(),
                                     &mut rx, &mut deferred_audio, duplex).await,
                             };
                             let text = match final_result {
@@ -2131,9 +2132,8 @@ fn reset_timed_out_asr(vad: &mut Vad, latest: &mut String, displayed: &mut Strin
     deferred.retain(|input| !matches!(input, Input::Pcm(..)));
 }
 
-async fn wait_for_asr_final(rec: &StreamingSpeechRecognizer, events: &mut mpsc::UnboundedReceiver<StreamingSpeechEvent>,
+async fn wait_for_asr_final(budget: std::time::Duration, events: &mut mpsc::UnboundedReceiver<StreamingSpeechEvent>,
     latest: String, rx: &mut mpsc::Receiver<Input>, deferred: &mut VecDeque<Input>, duplex: bool) -> Result<String, String> {
-    let budget = rec.final_wait_budget();
     let limit = final_capture_limit(budget);
     await_with_capture(await_final_text_with_timeout(events, latest, budget), rx, deferred, duplex, limit).await
 }
@@ -2185,7 +2185,7 @@ async fn answer_turn(
     history: &mut Vec<ChatTurn>,
     desktop_conversation: &mut crate::desktop_agent::Conversation,
     user_text: &str,
-    tts: &mut dyn TtsEngine,
+    tts: &mut DoubaoTtsClient,
     player: &Player,
 ) -> Result<(), String> {
     enum ReplyEvent { Sentence(String), Search(crate::web_search::Event) }
@@ -3387,10 +3387,10 @@ mod tests {
             let mut next = current.clone(); next.voice.provider = "dashscope_tts".into();
             queue_persona_update(&session, next).unwrap();
             // 只有 provider 变化也必须重建引擎，不能沿用上一个服务商的连接。
-            let mut tts: Box<dyn TtsEngine> = Box::new(DoubaoTtsClient::new(crate::doubao_tts::DoubaoTtsConfig::new("test", "s", "", 1.0, "")));
-            assert!(apply_pending_persona_with(&session, &mut current, &mut tts, |voice| {
+            let mut tts = DoubaoTtsClient::new(crate::doubao_tts::DoubaoTtsConfig::new("test", "s", "", 1.0, ""));
+            assert!(apply_pending_persona_with(&session, &mut current, &mut tts, false, |voice| {
                 assert_eq!(voice.provider, "dashscope_tts");
-                Ok(Box::new(DoubaoTtsClient::new(crate::doubao_tts::DoubaoTtsConfig::new("test", &voice.speaker, "", voice.speed(), ""))))
+                Ok(crate::doubao_tts::DoubaoTtsConfig::new("test", &voice.speaker, "", voice.speed(), ""))
             }).await.unwrap());
             assert_eq!(current.voice.provider, "dashscope_tts");
         });

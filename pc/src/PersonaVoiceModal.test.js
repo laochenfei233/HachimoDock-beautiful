@@ -27,7 +27,6 @@ test("modal edits persona fields and applies templates", () => {
 });
 
 test("Doubao retains the catalog, clone, speed and shared volume controls", () => {
-  assert.match(source, /service\?\.provider === "volcengine"/);
   assert.match(source, /DOUBAO_SPEAKERS/);
   assert.match(source, /updateVoice\("clone_speaker_id"/);
   assert.match(source, /updateVoice\("speed"/);

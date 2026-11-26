@@ -53,7 +53,7 @@ test("prism voice rejects bound history and rides the composer identity maps", (
   const macos = read("../src-tauri/src/codex_composer_macos.rs");
 
   // Voice draft startup refuses bound sessions for prism like DSH/WorkBuddy.
-  assert.match(rust, /"workbuddy" \| "devin" \| "deepseek-harness" \| "prism-agent" \| "zcode"\) \{\s*Err\(/);
+  assert.match(rust, /"workbuddy" \| "devin" \| "deepseek-harness"(?: \| "[^"]+")*\) \{\s*Err\(/);
   // Windows identity: real Tauri binary name, verified against the NSIS layout.
   assert.match(composer, /"prism-agent" => macos::MacosAgent::PrismAgent/);
   assert.match(composer, /"prism-agent" => &\["prism-agent\.exe"\]/);

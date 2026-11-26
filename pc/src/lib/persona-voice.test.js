@@ -27,6 +27,7 @@ import {
   personaSummaryLabel,
   presetVoicesFor,
   validatePersonaVoice,
+  voiceOptionsFor,
   voiceSpecFor,
 } from "./persona-voice.js";
 

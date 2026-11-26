@@ -22,32 +22,31 @@ fn audible(marks:&mut VecDeque<Mark>,played:u64)->Option<(String,u32)>{
     let fraction=played.saturating_sub(m.start).min(m.end-m.start);
     Some((m.id.clone(),m.offset+(fraction*m.characters as u64/(m.end-m.start).max(1))as u32))
 }
-pub(super) fn play(j:&Arc<Job>,usb:&UsbSerialManager,setup:crate::voice_chat_settings::TtsEngineSetup,items:Vec<SpeechItem>)->Result<(),String>{
+pub(super) fn play(j:&Arc<Job>,usb:&UsbSerialManager,cfg:crate::doubao_tts::DoubaoTtsConfig,items:Vec<SpeechItem>)->Result<(),String>{
     // At most two completed segments plus the currently playing segment.
     let (tx,rx)=mpsc::sync_channel::<Result<Prepared,String>>(2);
     let producer_job=j.clone();let producer_usb=usb.clone();
     std::thread::Builder::new().name("component-speech-prefetch".into()).spawn(move||{
-        let cache_key=setup.cache_key;let mut client=setup.engine;
+        let mut client=crate::doubao_tts::DoubaoTtsClient::new(cfg.clone());
         let cached=producer_job.speech_key.starts_with("news-");
         'items:for item in items{
             let mut offset=0;
             for part in crate::knowledge_narration::speech_parts("",&item.text){
                 if stopped(&producer_job,&producer_usb){break 'items;}
-                let saved=if cached{super::speech_cache::load(&cache_key,&part)}else{None};
+                let saved=if cached{super::speech_cache::load(&cfg,&part)}else{None};
                 #[cfg(test)]
                 if cached&&saved.is_none()&&std::env::var("PET_NEWS_CACHE_ONLY").as_deref()==Ok("1"){
                     let _=tx.send(Err("cache-only acceptance encountered a cache miss".into()));break 'items;
                 }
                 let hit=saved.is_some();let mut pcm=saved.unwrap_or_default();let mut overflow=false;
                 let result=if hit{Ok(())}else{tauri::async_runtime::block_on(async{
-                    let mut sink=|chunk: &[u8]|{if pcm.len()+chunk.len()<=1_920_000{pcm.extend_from_slice(chunk);}else{overflow=true;}};
-                    let future=client.synthesize(&part,&mut sink);
+                    let future=client.synthesize(&part,|chunk|{if pcm.len()+chunk.len()<=1_920_000{pcm.extend_from_slice(chunk);}else{overflow=true;}});
                     tokio::select!{
                         result=tokio::time::timeout(Duration::from_secs(35),future)=>result.map_err(|_|"朗读生成超时".to_string()).and_then(|v|v.map(|_|()).map_err(|_|"朗读服务失败，请检查语音配置".into())),
                         _=async{while !stopped(&producer_job,&producer_usb){tokio::time::sleep(Duration::from_millis(100)).await;}}=>Err("朗读已取消".into()),
                     }
                 })};
-                if cached&&result.is_ok()&&!hit&&!overflow{super::speech_cache::save(&cache_key,&part,&pcm);}
+                if cached&&result.is_ok()&&!hit&&!overflow{super::speech_cache::save(&cfg,&part,&pcm);}
                 let result=result.and_then(|_|if overflow{Err("朗读内容超过音频长度上限".into())}else if pcm.is_empty(){Err("没有生成可播放的语音".into())}else{Ok(Prepared{id:item.id.clone(),offset,characters:part.chars().count()as u32,pcm})});
                 let failed=result.is_err();
                 if tx.send(result).is_err()||failed{break 'items;}

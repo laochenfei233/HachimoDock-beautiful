@@ -372,7 +372,7 @@ impl DoubaoTtsClient {
             return crate::openai_tts::synthesize_paced(&self.cfg, text, &mut on_pcm).await;
         }
         if matches!(self.cfg.tts_provider.as_str(), "dashscope" | "deepseek") {
-            // 多服务商扩展：服务器直连合成流式输出，复用 TtsEngine 适配。
+            // 多服务商扩展：服务器直连合成流式输出，复用 TtsEngine 适配；收齐后按块回调。
             let mut engine: Box<dyn crate::speech::TtsEngine> = match self.cfg.tts_provider.as_str() {
                 "dashscope" => Box::new(crate::dashscope_tts::DashscopeTtsClient::new(
                     self.cfg.api_key.clone(), self.cfg.tts_base_url.clone(),
@@ -381,11 +381,12 @@ impl DoubaoTtsClient {
                     self.cfg.api_key.clone(), self.cfg.tts_base_url.clone(),
                     self.cfg.tts_voice.clone())),
             };
-            let mut total = 0usize;
-            return engine.synthesize(text, &mut |chunk: &[u8]| {
-                total += chunk.len();
-                let _ = on_pcm(chunk);
-            }).await;
+            let mut pcm = Vec::new();
+            engine.synthesize(text, &mut |chunk: &[u8]| pcm.extend_from_slice(chunk)).await?;
+            for chunk in pcm.chunks(4800) {
+                on_pcm(chunk).await?;
+            }
+            return Ok(pcm.len());
         }
         let clean = text.trim();
         if clean.is_empty() {

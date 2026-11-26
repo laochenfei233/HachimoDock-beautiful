@@ -386,7 +386,7 @@ fn apply_llm_defaults(settings: &mut VoiceChatSettings) {
 /// 豆包服务商的 Key 与 ASR 共用（存于 volcengine_asr 凭据库）；其他服务商取自己的 scope。
 fn speech_key(settings: &VoiceChatSettings, provider: &str, base_url: &str) -> Option<String> {
     if provider == "volcengine" {
-        crate::volcengine_asr::stored_api_key()
+        crate::volcengine_asr::stored_volcengine_key(base_url)
     } else {
         settings.speech_api_keys.get(&speech_scope(provider, base_url))
             .map(|key| key.trim()).filter(|key| !key.is_empty()).map(str::to_owned)
@@ -923,7 +923,6 @@ fn merge_settings(mut settings: VoiceChatSettings, input: VoiceChatSettingsInput
         if let Some(value) = input.tts_voice {
             settings.tts_voice = value.trim().to_string();
         }
-    }
     }
     remember_active_key(&mut settings);
     settings

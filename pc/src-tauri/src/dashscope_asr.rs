@@ -116,7 +116,7 @@ async fn run_round(
     request.headers_mut().insert("Authorization", HeaderValue::from_str(&auth).map_err(|_| "API Key 含非法字符")?);
     request.headers_mut().insert("user-agent", HeaderValue::from_static("HachimoDock"));
 
-    let (mut socket, _) = tokio::time::timeout(CONNECT_TIMEOUT, crate::llm_network::connect_websocket(request))
+    let (mut socket, _) = tokio::time::timeout(CONNECT_TIMEOUT, crate::llm_network::connect_websocket("dashscope-asr", request))
         .await
         .map_err(|_| "连接通义千问语音识别超时".to_string())?
         .map_err(|error| format!("连接通义千问语音识别失败: {error}"))?;

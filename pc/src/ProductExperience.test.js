@@ -523,7 +523,7 @@ test("device dashboard remains the management surface with one desktop-pet assig
 
   assert.match(channelMatrix, /resolveDashboardPreviewMedia/);
   assert.match(dashboard, /title="桌宠伙伴"/);
-  assert.doesNotMatch(channelMatrix, /className="channel-row__thumb-wrap"/);
+  assert.match(channelMatrix, /className="channel-row__thumb-wrap"/); // fork: inline appearance preview
   assert.match(channelMatrix, /agentOptions\.filter\(\(agent\) => agent\?\.id\)/);
   assert.match(channelMatrix, /BUILTIN_TERRIER_APPEARANCE_ID/);
   assert.match(channelMatrix, /saveAgentAppearance\(agentId, appearance\.id\)/);

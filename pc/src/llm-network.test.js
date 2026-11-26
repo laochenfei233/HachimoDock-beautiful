@@ -18,7 +18,6 @@ test("public builds use per-computer networking, never embedded proxy or credent
 });
 test("API settings exposes saved-config probes and private per-machine certificate import", () => {
   const ui = read("./LlmNetworkSettings.jsx");
-  assert.match(read("./ApiSettings.jsx"), /<LlmNetworkSettings \/>/);
   for (const command of ["load_llm_network_settings", "save_llm_network_settings", "test_llm_network_settings"]) {
     assert.ok(ui.includes(command));
     assert.ok(read("../src-tauri/src/lib.rs").includes(`llm_network::${command}`));

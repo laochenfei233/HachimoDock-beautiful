@@ -1136,6 +1136,12 @@ fn read_stored_config() -> Result<Option<StoredSpeechSettings>, String> {
     }
 }
 
+/// 多服务商扩展：豆包语音 Key 的凭据库读取（speech_key / 合成路由共用）。
+pub(crate) fn stored_volcengine_key(endpoint: &str) -> Option<String> {
+    let stored = read_stored_config().ok().flatten().or_else(|| read_legacy_config().ok().flatten())?;
+    stored.key_for_scope("volcengine", endpoint)
+}
+
 fn same_custom_speech_root(first: &str, second: &str) -> bool {
     use crate::voice_chat_settings::custom_speech_endpoint;
     custom_speech_endpoint(first).ok().zip(custom_speech_endpoint(second).ok())

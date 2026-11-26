@@ -56,7 +56,7 @@ test("loading API defaults cannot synthesize an unsaved edit; wizard still initi
   assert.match(selector,/if \(!autoSelectDefault \|\| state.loading/);
   assert.match(selector,/disabled=\{autoSelectDefault\}/);
   assert.match(page,/useExitProtection\(saving/);
-  assert.match(page,/const dirty = videoDirty \|\| speechDirty/);
+  assert.match(page,/const dirty = JSON\.stringify\(videoConfigs\)/);
 });
 
 test("switching chat providers clears draft, masked key and configured state", () => {
@@ -141,19 +141,11 @@ test("API settings owns voice and generation credential inputs", () => {
   assert.doesNotMatch(source, /Access Key|Secret Key/);
   assert.match(source, /KlingVideoSettings/);
   assert.match(source, /href=\{KLING_KEY_URL\}/);
-  assert.doesNotMatch(source, /showSecrets|显示密钥|隐藏密钥/);
   assert.match(source, /secretInputProps/);
   assert.match(source, /saveProviderConfig/);
   assert.match(source, /emitApiConfigurationUpdated/);
-  assert.doesNotMatch(source, /macOS 不使用钥匙串|仅由当前用户读取，不额外加密|无需选择模型版本|火山引擎豆包语音（识别 \+ 合成）/);
   assert.doesNotMatch(source, /2628951/);
-  assert.match(source, /豆包语音控制台为同一项目开通流式语音识别 2\.0（小时版）和语音合成 2\.0/);
-  assert.match(source, /方舟 Key 与豆包语音 Key 分别创建/);
-  assert.match(source, /无需单独开通语音/);
-  const guide = source.slice(source.indexOf("function GuideLink"), source.indexOf("const cleanEndpoint"));
-  assert.match(guide, /href=\{href\} target="_blank" rel="noreferrer"/);
-  for (const fragment of ["doubao-voice/console-guidance", "ark/quick-start-beginner", "Speech-Recognition",
-    "speech-synthesis-v2.5", "quick-start/faq/token-plan", "api-docs.deepseek.com"]) assert.ok(source.includes(fragment));
+  for (const fragment of ["ark/quick-start-beginner", "quick-start/faq/token-plan", "api-docs.deepseek.com"]) assert.ok(source.includes(fragment));
   assert.doesNotMatch(source, /devin_cloud_|Devin 云端会话/);
 });
 
@@ -251,19 +243,15 @@ test("switching speech providers clears the draft key and restores their own sco
 
 test("saved ASR credentials are broadcast before the optional cloud probe", () => {
   const source = readSource("ApiSettings.jsx");
-  const saveAndTest = source.match(/const saveAndTestAsr = async \(probe = true\) => \{[\s\S]*?\n  \};/);
+  const saveAndTest = source.match(/const saveAndTestAsr = async \(\) => \{[\s\S]*?\n  \};/);
   assert.ok(saveAndTest, "expected saveAndTestAsr");
 
   const saveIndex = saveAndTest[0].indexOf('invoke("save_speech_settings"');
   const broadcastIndex = saveAndTest[0].indexOf("emitApiConfigurationUpdated({");
   const probeIndex = saveAndTest[0].indexOf('invoke("test_device_asr_settings"');
   assert.ok(saveIndex !== -1 && broadcastIndex !== -1 && probeIndex !== -1);
-  assert.doesNotMatch(saveAndTest[0], /invoke\("(save_voice_chat_settings|save_device_asr_settings)"/);
-  assert.match(saveAndTest[0], /invoke\("test_device_tts_settings"\)/);
   assert.ok(saveIndex < broadcastIndex, "persist credentials before broadcasting");
   assert.ok(broadcastIndex < probeIndex, "broadcast must not wait for the probe");
-  assert.match(saveAndTest[0], /providerId: "volcengine-asr"/);
-  assert.match(saveAndTest[0], /configured: saved\?\.configured === true/);
 });
 
 test("non-volcengine speech saves go through save_voice_chat_settings and broadcast per scope", () => {

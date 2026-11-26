@@ -55,6 +55,8 @@ pub trait SpeechRecognizer: Send {
     fn cancel(&self);
     /// 轮次代际：同一会话内单调递增，调用方据此丢弃上一个轮次的迟到事件。
     fn generation(&self) -> u64;
+    /// 本轮收尾等待预算：一次性识别服务商在 finish 后即进入终态，预算只需覆盖网络超时。
+    fn final_wait_budget(&self) -> std::time::Duration { std::time::Duration::from_secs(20) }
 }
 
 /// 非火山服务商的轮次代际：进程级自增即可满足"新轮次 > 旧轮次"的判定。
@@ -73,4 +75,5 @@ impl SpeechRecognizer for crate::volcengine_asr::StreamingSpeechRecognizer {
     }
     fn cancel(&self) { crate::volcengine_asr::StreamingSpeechRecognizer::cancel(self) }
     fn generation(&self) -> u64 { crate::volcengine_asr::StreamingSpeechRecognizer::generation(self) }
+    fn final_wait_budget(&self) -> std::time::Duration { crate::volcengine_asr::StreamingSpeechRecognizer::final_wait_budget(self) }
 }

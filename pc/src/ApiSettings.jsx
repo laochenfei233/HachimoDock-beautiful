@@ -1,3 +1,4 @@
+import { secretInputProps } from "./lib/secret-input.js";
 /**
  * [Input] Shared avatar provider configs including persisted video parameters, native Volcengine ASR credential commands, per-provider ASR/TTS voice-chat status, the persisted appearance preference, and optional return navigation.
  * [Output] Independent LLM/ASR/TTS reads, honest credential-save errors and retained navigation drafts; speech credentials are scoped per provider (Doubao keeps the keyring path), saved ASR changes are broadcast with save vs. test results distinguished, an appearance group switches light/dark/auto theme in place, MiMo exposes pay-as-you-go and China Token Plan connections, and video-generation providers switch through one segmented control with per-provider drafts retained.
@@ -5,14 +6,12 @@
  * [Sync] If this file changes, update this header and `pc/src/.folder.md`.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
-  Eye,
-  EyeOff,
   ExternalLink,
   KeyRound,
   Loader2,
@@ -20,9 +19,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import AppUpdateCard from "./AppUpdateCard.jsx";
+import { formatModelIssue } from "./lib/model-issue.js";
 import PageShell from "./shell/PageShell.jsx";
 import Card from "./shell/Card.jsx";
 
+import CustomSpeechSettings from "./CustomSpeechSettings.jsx";
 import LlmNetworkSettings from "./LlmNetworkSettings.jsx";
 import GenerationDiagnostics from "./GenerationDiagnostics.jsx";
 import TextModelSelect from "./TextModelSelect.jsx";
@@ -42,6 +43,7 @@ import {
   VIDEO_PROVIDERS,
   loadProviderConfig,
   saveProviderConfig,
+  resolveProviderApiKey,
 } from "./lib/avatar-pipeline/provider-config.js";
 import {
   LLM_PRESETS,
@@ -129,6 +131,32 @@ function AppearanceCard({ embedded = false }) {
   return <Card title="外观" subtitle={subtitle}>{body}</Card>;
 }
 
+const SPEECH_NAMES = { volcengine: "豆包语音", mimo: "小米 MiMo", openai: "自定义端点" };
+const MIMO_SPEECH_DEFAULTS = { model: "mimo-v2.5-asr", ttsModel: "mimo-v2.5-tts", ttsVoice: "mimo_default" };
+const ARK_GUIDE = "https://docs.volcengine.com/docs/ark/quick-start-beginner?lang=zh";
+
+function GuideLink({ href, children }) {
+  return <a className="api-settings__credential-link" href={href} target="_blank" rel="noreferrer">
+    {children}<ExternalLink size={11} aria-hidden="true" />
+  </a>;
+}
+
+const cleanEndpoint = url => (url || "").trim().replace(/\/+$/, "");
+function llmSnapshot(s) {
+  return JSON.stringify([s.llmProvider, s.llmBaseUrl || "", s.llmModel || "", s.llmWebSearch !== false,
+    s.llmApiKey || "", s.llmSearchMode || "auto", s.llmSearchApiKey || ""]);
+}
+function generationConfig(draft, saved) {
+  const sameScope = draft.providerId !== "custom" || cleanEndpoint(draft.baseUrl) === cleanEndpoint(saved.baseUrl);
+  return { ...draft, apiKey: resolveProviderApiKey(draft.providerId, draft.apiKey) || (sameScope ? saved.apiKey : "") };
+}
+function savedSpeechProfiles(status) {
+  return {
+    savedVolcengine: status?.savedVolcengine === true,
+    savedMimo: status?.savedMimo === true,
+  };
+}
+
 export default function ApiSettings({ onBack, configReadError = "", active = true }) {
   const usageHelp = useUsageHelp();
   const [showSecrets, setShowSecrets] = useState(false);
@@ -169,6 +197,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
     ttsTone: "muted",
     ttsMessage: "正在读取语音合成配置…",
   });
+  const asrKeySaved = asrProvider === "mimo" ? asrState.savedMimo : asrState.savedVolcengine;
   // 实时对话：服务预填默认模型并允许修改；豆包 Seed TTS 2.0 复用识别 Key。
   const [voiceChat, setVoiceChat] = useState({
     loading: true,
@@ -206,6 +235,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
   useExitProtection(saving ? "API 配置正在保存或测试" : dirty ? "API 配置有未保存的修改" : "");
 
   const applyVoiceChatStatus = (status, patch = {}) => {
+    setSavedLlm(llmSnapshot({ ...status, llmProvider: status?.llmProvider || DEFAULT_LLM_PROVIDER }));
     setVoiceChat((current) => ({
       ...current,
       ...patch,
@@ -219,6 +249,8 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
       llmModel: status?.llmModel || "",
       llmApiKeyMasked: status?.llmApiKeyMasked || "",
       llmApiKeyMasks: status?.llmApiKeyMasks || {},
+      llmModels: status?.llmModels || {},
+      savedConfigured: status?.llmConfigured === true,
       llmCustomBaseUrl: status?.llmCustomBaseUrl || "",
     }));
   };
@@ -289,9 +321,25 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
         llmTone: status?.llmConfigured ? "success" : "warning",
         llmMessage: status?.llmConfigured ? "配置已保存，开始聊天时将使用所选模型。" : "已保存，但还没有 API Key",
       });
-      setSavedLlm(null);
+
     } catch (error) {
-      setVoiceChat((current) => ({ ...current, llmPending: false, llmTone: "error", llmMessage: `保存失败：${error}` }));
+      setVoiceChat((current) => ({ ...current, llmPending: false, llmTone: "error", llmMessage: "保存失败。" + formatModelIssue("storage", chatName, error) }));
+    }
+  };
+
+  const testLlm = async () => {
+    const tested = llmSnapshot(voiceChat);
+    setVoiceChat(current => ({ ...current, llmTesting: true, llmTone: "muted", llmMessage: "正在测试所选模型…" }));
+    const finish = (llmTone, llmMessage) => setVoiceChat(current => llmSnapshot(current) === tested
+      ? { ...current, llmTesting: false, llmTone, llmMessage }
+      : { ...current, llmTesting: false, llmTone: "muted", llmMessage: "配置已更改，请测试当前选择。" });
+    try {
+      await invoke("test_voice_chat_model", { input: { llmProvider: voiceChat.llmProvider,
+        llmBaseUrl: voiceChat.llmProvider === "custom" ? voiceChat.llmBaseUrl : null,
+        llmModel: voiceChat.llmModel.trim(), llmApiKey: voiceChat.llmApiKey.trim() || null } });
+      finish("success", "所选模型已返回测试文本。配置修改仍需保存。");
+    } catch (error) {
+      finish("error", formatModelIssue("chat", chatName, error));
     }
   };
 
@@ -303,7 +351,23 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
         llmSearchApiKey: "", llmTone: "success", llmMessage: "已删除独立搜索 Key。" }));
     } catch (error) {
       setVoiceChat(current => ({ ...current, llmPending: false, llmTone: "error",
-        llmMessage: `删除搜索 Key 失败：${error}` }));
+        llmMessage: "删除搜索 Key 失败。" + formatModelIssue("storage", "DeepSeek", error) }));
+    }
+  };
+
+  const forgetLlmKey = async () => {
+    if (forgetScope !== llmScope) { setForgetScope(llmScope); return; }
+    setForgetScope(null);
+    setVoiceChat(current => ({ ...current, llmPending: true }));
+    try {
+      const status = await invoke("clear_voice_chat_secret", { which: "llm", scope: llmScope });
+      setVoiceChat(current => ({ ...current, llmPending: false, llmApiKeyMasks: status.llmApiKeyMasks,
+        savedConfigured: status.llmConfigured, llmConfigured: false, llmApiKeyMasked: "", llmApiKey: "",
+        llmTone: "success", llmMessage: "已忘记此服务在本机保存的对话模型 Key。" }));
+      emitApiConfigurationUpdated({ providerId: "voice-chat-llm", configured: status.llmConfigured });
+    } catch (error) {
+      setVoiceChat(current => ({ ...current, llmPending: false, llmTone: "error",
+        llmMessage: "忘记 Key 失败。" + formatModelIssue("storage", chatName, error) }));
     }
   };
 
@@ -426,6 +490,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
     + (speech.ttsConfigured ? 1 : 0) + (voiceChat.llmConfigured ? 1 : 0);
 
   const updateProvider = (providerId, patch) => {
+    videoEdits.current[providerId] = (videoEdits.current[providerId] || 0) + 1;
     setVideoConfigs((current) => ({
       ...current,
       [providerId]: {
@@ -436,47 +501,59 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
     setProviderResults((current) => ({ ...current, [providerId]: null }));
   };
 
-  const saveProvider = async (providerId) => {
+  const saveProvider = async (providerId, checkOnly = false) => {
     if (providerPending[providerId]) return;
-    const config = videoConfigs[providerId];
-    if (!providerCredentialsConfigured(providerId, config)) {
-      setProviderResults((current) => ({
-        ...current,
-        [providerId]: {
-          tone: "warning",
-          message: "请填写 API Key。",
-        },
-      }));
-      return;
-    }
+    const draft = videoConfigs[providerId];
+    const config = generationConfig(draft, savedVideoConfigs[providerId]);
+    const submittedEdit = videoEdits.current[providerId];
+    const hasKey = providerCredentialsConfigured(providerId, config);
+    const checks = [{ label: "API Key", ok: hasKey,
+      message: hasKey ? "已填写" : "请填写 API Key。" }];
     if (providerId === "custom") {
+      let validUrl = false;
       try {
-        new URL(config.baseUrl);
-      } catch {
-        setProviderResults((current) => ({
-          ...current,
-          [providerId]: { tone: "error", message: "请填写完整且有效的 Base URL。" },
-        }));
-        return;
-      }
+        const url = new URL(config.baseUrl);
+        validUrl = ["http:", "https:"].includes(url.protocol) && !(url.username || url.password || url.search || url.hash);
+      } catch { /* Report the invalid address alongside the other fields. */ }
+      checks.push({ label: "接口地址", ok: validUrl, message: validUrl ? "格式有效" : "请填写完整且有效的 Base URL。" });
+    }
+    const hasModel = Boolean(config.model?.trim());
+    checks.push({ label: "视频生成模型", ok: hasModel || providerId !== "custom",
+      message: hasModel ? "已指定" : providerId === "custom" ? "请填写视频生成模型。" : "使用服务预设" });
+    if (providerId === "volcengine") {
+      checks.push({ label: "图像理解模型", ok: true, message: config.thinkingModel ? "已指定" : "使用默认模型" },
+        { label: "图片处理模型", ok: true, message: config.imageModel ? "已指定" : "使用默认模型" });
+    }
+    const invalid = checks.find(check => !check.ok);
+    if (checkOnly || invalid) {
+      setProviderResults(current => ({ ...current, [providerId]: {
+        tone: invalid ? "warning" : "success",
+        message: checkOnly ? (invalid ? "请补全以下配置。" : "本地配置检查通过。模型调用权限需由服务端确认。") : invalid.message,
+        checks: checkOnly ? checks : null,
+      } }));
+      return;
     }
     setProviderPending(current => ({ ...current, [providerId]: true }));
     try {
       await saveProviderConfig(providerId, persistedProviderConfig(config));
     } catch (error) {
       setProviderResults((current) => ({ ...current,
-        [providerId]: { tone: "error", message: error.message || "配置未保存，请重试。" },
+        [providerId]: { tone: "error", message: "保存失败。" + formatModelIssue("storage", { volcengine: "火山方舟", kling: "可灵", custom: "自定义" }[providerId], error) },
       }));
       return;
     } finally {
       setProviderPending(current => ({ ...current, [providerId]: false }));
     }
     const savedConfig = { ...config, needsKlingApiKey: false };
-    setVideoConfigs(current => current[providerId] === config ? { ...current, [providerId]: savedConfig } : current);
+    setVideoConfigs(current => {
+      const latest = current[providerId];
+      if (latest.apiKey !== draft.apiKey || cleanEndpoint(latest.baseUrl) !== cleanEndpoint(draft.baseUrl)) return current;
+      return { ...current, [providerId]: { ...latest, needsKlingApiKey: false, apiKey: "" } };
+    });
     setSavedVideoConfigs(current => ({ ...current, [providerId]: savedConfig }));
     setProviderResults((current) => ({
       ...current,
-      [providerId]: { tone: "success", message: "已保存到当前客户端。" },
+      [providerId]: { tone: "success", message: videoEdits.current[providerId] === submittedEdit ? "已保存到当前客户端。" : "已保存上次提交的配置；后续修改仍待保存。" },
     }));
     emitApiConfigurationUpdated({ providerId });
   };
@@ -498,23 +575,11 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
       asrMessage: "正在保存并测试语音识别服务…",
     }));
     try {
-      saved = await invoke("save_device_asr_settings", {
+      const saved = await invoke("save_speech_settings", {
         input: {
           apiKey: speech.asrApiKey.trim() || null,
         },
       });
-      if (isCustom) {
-        await invoke("save_voice_chat_settings", {
-          input: {
-            ttsProvider: "openai",
-            ttsBaseUrl: speechCustom.baseUrl.trim(),
-            ttsModel: speechCustom.ttsModel.trim() || null,
-            ttsVoice: speechCustom.ttsVoice.trim() || null,
-          },
-        });
-      } else {
-        await invoke("save_voice_chat_settings", { input: { ttsProvider: "volcengine" } });
-      }
       emitApiConfigurationUpdated({
         providerId: "volcengine-asr",
         configured: saved?.configured === true,
@@ -611,27 +676,14 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
     <PageShell
       title="模型配置"
       subtitle="配置语音、对话和形象生成服务"
-      actions={(
-        <div className="api-settings__page-actions">
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => setShowSecrets((current) => !current)}
-          >
-            {showSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
-            {showSecrets ? "隐藏输入" : "显示输入"}
-          </button>
-          {onBack && (
-            <button type="button" className="btn-ghost btn-sm" onClick={onBack}>
-              <ArrowLeft size={14} />
-              返回
-            </button>
-          )}
-        </div>
+      actions={onBack && (
+        <button type="button" className="btn-ghost btn-sm" onClick={onBack}>
+          <ArrowLeft size={14} />返回
+        </button>
       )}
     >
       {dirty && <p role="status" className="api-settings__draft">有未保存的修改。切换页面会保留草稿；关闭客户端前请保存。</p>}
-      <section className="api-settings__overview" aria-label="API 配置概览">
+      <section className="api-settings__overview" aria-label="模型配置概览">
         <div className="api-settings__overview-icon" aria-hidden="true">
           <ShieldCheck size={22} />
         </div>
@@ -920,7 +972,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
         </div>
       </Card>
 
-      <Card title="对话大模型" subtitle="决定宠物在「实时对话」中如何理解和回答。选择一家服务并填写 API Key 即可。此配置用于和宠物聊天，不影响 ChatGPT、Claude 等 Agent 的语音输入。">
+      <Card id="model-settings-dialogue" title="对话大模型" subtitle="决定宠物在「实时对话」中如何理解和回答。选择一家服务并填写 API Key 即可。此配置用于和宠物聊天，不影响 ChatGPT、Claude 等 Agent 的语音输入。">
         <UsageHelp />
         <div className="api-settings__segments" role="radiogroup" aria-label="对话大模型">
           {[...LLM_PRESETS, { id: "custom", label: "自定义" }].map((preset) => {
@@ -937,6 +989,16 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
               {preset.label}
             </button>;
           })}
+        </div>
+        <div className="api-settings__guide">
+          {voiceChat.llmProvider === "doubao" && <>在火山方舟「开通管理」开通所选对话模型，到「API Key 管理」创建该项目的方舟 Key。方舟 Key 与豆包语音 Key 分别创建。
+            <GuideLink href={ARK_GUIDE}>方舟模型开通与 API Key</GuideLink></>}
+          {mimo && <>选择 Key 对应的按量 API 或中国内地 Token Plan，两种接入方式各用自己的 Key 和额度。
+            <GuideLink href="https://mimo.mi.com/docs/zh-CN/quick-start/faq/token-plan">MiMo 接入说明</GuideLink></>}
+          {voiceChat.llmProvider === "deepseek" && <>在 DeepSeek 开放平台创建 API Key。
+            <GuideLink href="https://api-docs.deepseek.com/zh-cn/">DeepSeek 接入说明</GuideLink></>}
+          {voiceChat.llmProvider === "custom" && <>填写支持聊天补全的接口地址、模型 ID 和该接口的 Key。</>}
+          <div>测试当前模型会发送一条简短消息，可能产生费用。草稿在点击保存后生效。</div>
         </div>
         <div className="api-settings__form api-settings__form--llm">
           {mimo && (
@@ -971,8 +1033,8 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
           )}
           <label className="ui-field" htmlFor="api-settings-llm-model">
             <span className="ui-field__label">模型名称 / 接入点 ID</span>
-            <TextModelSelect value={voiceChat.llmModel}
-              onChange={llmModel => setVoiceChat(current => ({ ...current, llmModel }))}
+            <TextModelSelect autoLoad={false} value={voiceChat.llmModel}
+              onChange={llmModel => editLlm({ llmModel })}
               provider={voiceChat.llmProvider} baseUrl={voiceChat.llmBaseUrl}
               apiKey={voiceChat.llmApiKey} configured={!voiceChat.loading && voiceChat.llmConfigured}
               disabled={voiceChat.llmPending || voiceChat.loading} />
@@ -983,11 +1045,10 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
             <input
               id="api-settings-llm-key"
               className="ui-control api-settings__secret-input"
-              type={showSecrets ? "text" : "password"}
-              autoComplete="new-password"
+              {...secretInputProps}
               value={voiceChat.llmApiKey}
-              onChange={(event) => setVoiceChat((current) => ({ ...current, llmApiKey: event.target.value }))}
-              placeholder={voiceChat.llmConfigured ? `已保存 ${voiceChat.llmApiKeyMasked}；留空保持不变`
+              onChange={event => editLlm({ llmApiKey: event.target.value })}
+              placeholder={voiceChat.llmConfigured ? "已保存；留空保持不变"
                 : mimo ? (mimo.id === "mimo" ? "粘贴 MiMo 按量 API Key" : "粘贴该集群的 Token Plan API Key")
                   : "粘贴这家模型的 API Key"}
               disabled={voiceChat.llmPending || voiceChat.loading}
@@ -1037,7 +1098,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
           {(voiceChat.llmSearchMode !== "auto" || voiceChat.llmSearchConfigured) && <div>
             <label className="ui-field">
               <span>DeepSeek 搜索 API Key</span>
-              <input type={showSecrets ? "text" : "password"} autoComplete="off" spellCheck={false}
+              <input {...secretInputProps}
                 value={voiceChat.llmSearchApiKey}
                 placeholder={voiceChat.llmSearchConfigured ? "已保存，留空继续使用" : "输入 DeepSeek 官方 API Key"}
                 disabled={voiceChat.llmPending || voiceChat.loading}
@@ -1049,10 +1110,9 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
               onClick={clearSearchKey}>删除独立搜索 Key</button>}
           </div>}
         </>}
-        <LlmNetworkSettings />
       </Card>
 
-      <Card title="形象生成" subtitle="新形象默认使用已配置的火山引擎，也可在生成配置中选择可灵 AI">
+      <Card title="形象生成" id="model-settings-avatar" subtitle="方舟账户需开通所选视频、图像理解及图片处理模型。检查本地配置只核对填写内容，生成任务才会调用所选模型。">
         <GenerationDiagnostics />
         <div className="api-settings__segments" role="radiogroup" aria-label="形象生成服务商">
           {VIDEO_PROVIDERS.map((provider) => (
@@ -1086,15 +1146,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                     <small>
                       {provider.sub}
                       {provider.id === "volcengine" && (
-                        <a
-                          className="api-settings__credential-link"
-                          href="https://ark.volcengine.com/model/detail?name=doubao-seedance-2-0-mini"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Key 获取方式
-                          <ExternalLink size={11} aria-hidden="true" />
-                        </a>
+                        <GuideLink href={ARK_GUIDE}>方舟模型开通与 API Key</GuideLink>
                       )}
                     </small>
                   </span>
@@ -1109,11 +1161,10 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                     <input
                       id={`api-settings-${provider.id}-key`}
                       className="ui-control api-settings__secret-input"
-                      type={showSecrets ? "text" : "password"}
-                      autoComplete="new-password"
-                      value={config.apiKey === "hachimidock-bundled-ark-v1" ? "" : config.apiKey}
+                      {...secretInputProps}
+                      value={draft.apiKey}
                       onChange={(event) => updateProvider(provider.id, { apiKey: event.target.value })}
-                      placeholder={config.apiKey === "hachimidock-bundled-ark-v1" ? "内置服务已启用，可填写自己的 Key 替换" : `输入${provider.label} API Key`}
+                      placeholder={generationConfig({ ...draft, apiKey: "" }, saved).apiKey ? "已保存；留空保持原 Key" : "输入" + provider.label + " API Key"}
                     />
                   </label>
                   {isKling && <>
@@ -1132,36 +1183,49 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                         id="api-settings-custom-url"
                         className="ui-control api-settings__secret-input"
                         value={config.baseUrl}
-                        onChange={(event) => updateProvider(provider.id, { baseUrl: event.target.value })}
+                        onChange={event => updateProvider(provider.id, { baseUrl: event.target.value,
+                          ...(cleanEndpoint(event.target.value) !== cleanEndpoint(draft.baseUrl) ? { apiKey: "" } : {}) })}
                         placeholder="https://api.example.com"
                       />
                     </label>
                   )}
+                  {isCustom && <label className="ui-field" htmlFor="api-settings-custom-model">
+                    <span className="ui-field__label">视频生成模型</span>
+                    <input id="api-settings-custom-model" className="ui-control" value={config.model}
+                      onChange={event => updateProvider(provider.id, { model: event.target.value })} />
+                  </label>}
                   {provider.id === "volcengine" && <div className="ui-field">
                     <span className="ui-field__label">视频生成模型</span>
                     <VideoModelSelect apiKey={config.apiKey} baseUrl={config.baseUrl}
                       model={config.model} onModel={model => updateProvider(provider.id, { model })}
-                      autoSelectDefault={false} />
+                      autoSelectDefault={false} autoLoad={false} />
                     <span className="muted small">用于生成形象视频；与下方提示词模型独立。修改后点击保存。</span>
                   </div>}
                   {provider.id === "volcengine" && <div className="ui-field">
                     <span className="ui-field__label">图像理解 / 提示词模型</span>
-                    <TextModelSelect vision label="图像理解模型" value={config.thinkingModel}
+                    <TextModelSelect vision autoLoad={false} label="图像理解模型" value={config.thinkingModel}
                       onChange={thinkingModel => updateProvider(provider.id, { thinkingModel })}
                       apiKey={config.apiKey} baseUrl={config.baseUrl} />
                   </div>}
                   {provider.id === "volcengine" && <div className="ui-field">
                     <span className="ui-field__label">图片处理模型</span>
-                    <ImageModelSelect value={config.imageModel}
+                    <ImageModelSelect autoLoad={false} value={config.imageModel}
                       onChange={imageModel => updateProvider(provider.id, { imageModel })}
                       apiKey={config.apiKey} baseUrl={config.baseUrl} />
                   </div>}
                 </fieldset>
 
+                {result?.checks && <ul className="api-settings__probe-results" aria-label="本地配置检查分项">
+                  {result.checks.map(check => <li key={check.label} className={check.ok ? "" : "is-error"}>
+                    <strong>{check.label}</strong> {check.message}
+                  </li>)}
+                </ul>}
                 <footer className="api-settings__provider-foot">
                   <span className={`api-settings__provider-result${resultToneClass(result?.tone)}`}>
-                    {result?.message || (configReadError ? "原配置保留，暂不可修改" : configured ? "可用于形象生成" : "等待填写凭据")}
+                    {result?.message || (configReadError ? "原配置保留，暂不可修改" : configured ? "凭据已保存" : "等待填写凭据")}
                   </span>
+                  <button type="button" className="btn-ghost btn-sm" disabled={Boolean(configReadError) || providerPending[provider.id]}
+                    onClick={() => saveProvider(provider.id, true)}>检查本地配置</button>
                   <button
                     type="button"
                     className="btn-secondary btn-sm"

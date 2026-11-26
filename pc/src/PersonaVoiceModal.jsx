@@ -14,7 +14,9 @@
  * [Sync] If this file changes, update this header and `ref/src/.folder.md`.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { formatModelIssue } from "./lib/model-issue.js";
+import { speechModelMessage } from "./lib/realtime-feedback.js";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Loader, Save, Volume2, WandSparkles, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
@@ -105,6 +107,15 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [previewing, setPreviewing] = useState(false);
+  const previewOwner = useRef(null);
+  const cancelPreview = useCallback(() => {
+    previewOwner.current?.abort();
+    previewOwner.current = null;
+  }, []);
+  useEffect(() => {
+    setPreviewing(false);
+    return cancelPreview;
+  }, [appearance?.id, cancelPreview]);
   const [volumeReady, setVolumeReady] = useState(false);
   useEffect(() => {
     let disposed = false;
@@ -117,7 +128,7 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
         setSavedForm((current) => ({ ...current, voice: { ...current.voice, volume } }));
         setVolumeReady(true);
       }
-    }).catch((error) => { if (!disposed) setSaveError(String(error)); });
+    }).catch((error) => { if (!disposed) setSaveError(formatModelIssue("storage", "本机全局音量", error)); });
     return () => { disposed = true; };
   }, []);
 
@@ -210,6 +221,8 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
       return;
     }
     setSaving(true);
+    cancelPreview();
+    setPreviewing(false);
     setSaveError("");
     let volumeSaved = false;
     let personaSaved = false;
@@ -227,20 +240,30 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
     } finally {
       setSaving(false);
     }
-  }, [appearance?.id, form, onSaved, saving, volumeReady]);
+  }, [appearance?.id, form, onSaved, saving, volumeReady, cancelPreview]);
 
   const handlePreview = useCallback(async () => {
-    if (!previewAvailable || previewing || !onPreview || !volumeReady) return;
-    setPreviewing(true);
-    try {
-      await onPreview(form);
-    } catch (err) {
-      console.error(err);
-      setSaveError(err?.message || String(err));
-    } finally {
-      setPreviewing(false);
+    if (!previewAvailable || previewOwner.current || !onPreview || !volumeReady) return;
+    const { tts_overrides } = validatePersonaVoice(form);
+    if (tts_overrides) {
+      setErrors(current => ({ ...current, tts_overrides }));
+      return;
     }
-  }, [form, onPreview, previewAvailable, previewing, volumeReady]);
+    const owner = new AbortController();
+    previewOwner.current = owner;
+    setPreviewing(true);
+    setSaveError("");
+    try {
+      await onPreview(form, owner.signal);
+    } catch (err) {
+      if (!owner.signal.aborted) setSaveError(speechModelMessage(err));
+    } finally {
+      if (previewOwner.current === owner) {
+        previewOwner.current = null;
+        setPreviewing(false);
+      }
+    }
+  }, [form, onPreview, previewAvailable, volumeReady]);
 
   const closeAllowed = !required && !saving;
   useExitProtection(saving ? "人设与声音正在保存" : JSON.stringify(form) !== JSON.stringify(savedForm)
@@ -261,8 +284,9 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
         return;
       } finally { setConfirmingClose(false); }
     }
+    cancelPreview();
     onClose?.();
-  }, [required, saving, confirmingClose, form, savedForm, onClose]);
+  }, [required, saving, confirmingClose, form, savedForm, onClose, cancelPreview]);
   const dialogRef = useDialogFocus(requestClose, !closeAllowed || confirmingClose);
 
   return (
@@ -483,6 +507,44 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
               )}
               <div className="persona-voice-modal__row">
                 <label className="ui-field">
+                  <span className="ui-field__label">搜索音色 · 共 {DOUBAO_SPEAKERS.length} 种</span>
+                  <input className="field-input" type="search" value={speakerQuery}
+                    onChange={(event) => setSpeakerQuery(event.target.value)}
+                    placeholder="搜索名称、语言或音色 ID" disabled={saving} />
+                </label>
+                <label className="ui-field">
+                  <span className="ui-field__label">音色</span>
+                  <select
+                    className="field-input"
+                    value={form.voice.speaker}
+                    onChange={(event) => updateVoice("speaker", event.target.value)}
+                    disabled={saving}
+                  >
+                    {speakerGroups.map(([language, speakers]) => (
+                      <optgroup key={language} label={language}>
+                        {speakers.map((speaker) => <option key={speaker.id} value={speaker.id}>{speaker.label}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                  {speakerQuery.trim() && speakerOptions.every((speaker) => speaker.language === "当前音色") && (
+                    <span className="muted small">未找到匹配音色，已保留当前选择。</span>
+                  )}
+                  {errors.speaker && <span className="ui-field__error">{errors.speaker}</span>}
+                </label>
+                <label className="ui-field">
+                  <span className="ui-field__label">复刻音色 ID（可选，填了优先）</span>
+                  <input
+                    className="field-input"
+                    value={form.voice.clone_speaker_id}
+                    onChange={(event) => updateVoice("clone_speaker_id", event.target.value)}
+                    placeholder="火山控制台声音复刻页申请所得，形如 S_xxxx"
+                    disabled={saving}
+                  />
+                </label>
+              </>}
+              {errors.tts_overrides && <span className="ui-field__error">{errors.tts_overrides}</span>}
+              <div className="persona-voice-modal__row">
+                <label className="ui-field">
                   <span className="ui-field__label">语速 <em className="muted">{Number(form.voice.speed).toFixed(2)}</em></span>
                   <input
                     className="persona-voice-modal__range"
@@ -494,7 +556,7 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
                     onChange={(event) => updateVoice("speed", Number(event.target.value))}
                     disabled={saving}
                   />
-                </label>
+                </label>}
                 <label className="ui-field">
                   <span className="ui-field__label">全局音量 <em className="muted">{volumeReady ? Number(form.voice.volume).toFixed(2) : "读取中"}</em></span>
                   <input
@@ -516,12 +578,14 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
                   className="btn-secondary btn-sm"
                   onClick={handlePreview}
                   disabled={!previewAvailable || previewing || saving || !volumeReady}
-                  title={previewAvailable ? "用当前人设和音色生成一句问候并播放" : PREVIEW_UNAVAILABLE_HINT}
+                  title={previewAvailable ? "用当前人设和音色生成一句问候并播放" : previewHint}
                 >
                   {previewing ? <Loader size={14} className="spin" /> : <Volume2 size={14} />} 试听
                 </button>
+                {previewing && <button type="button" className="btn-ghost btn-sm"
+                  onClick={() => { cancelPreview(); setPreviewing(false); }}>停止试听</button>}
                 <span className="muted small">
-                  {previewAvailable ? "点击试听听听效果。外语音色建议使用对应语言的开场白。" : PREVIEW_UNAVAILABLE_HINT}
+                  {previewAvailable ? "点击试听听听效果。外语音色建议使用对应语言的开场白。" : previewHint}
                 </span>
               </div>
             </section>

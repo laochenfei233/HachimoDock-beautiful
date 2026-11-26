@@ -14,11 +14,15 @@ The installed app is named **HachimiDock**. Developer documentation may also cal
 
 | Component | Version | Download |
 | --- | --- | --- |
-| Windows x64 | **0.1.245** | [Download installer](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_Windows-x64-setup.exe) |
-| macOS (Apple silicon) | **0.1.245** | [Download installer](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_macOS-arm64.dmg) |
-| Device firmware | **0.7.107-p4-r292 / R292** | OTA included in the desktop client · [Factory kits](https://github.com/ai-maker-lab/HachimoDock/releases/tag/v0.1.245) |
+| Windows x64 | **0.1.265** | [Download installer](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.265/HachimiDock_0.1.265_Windows-x64-setup.exe) |
+| macOS (Apple silicon) | **0.1.265** | [Download installer](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.265/HachimiDock_0.1.265_macOS-arm64.dmg) |
+| Device firmware | **0.7.124-p4-r313 / R313** | OTA included in the desktop client · [Factory kits](https://github.com/ai-maker-lab/HachimoDock/releases/tag/v0.1.265) |
 
-See the [0.1.245 release notes](https://github.com/ai-maker-lab/HachimoDock/releases/tag/v0.1.245). Both installers include R292 OTA firmware for WiFi6 and Pico boards with v1 and v3 chips. Wi-Fi button and conversation-state delivery requires both the updated client and firmware. After Wi-Fi pairing, the device can disconnect from the computer's USB data connection; it still needs power, and desktop-assisted features still require the client to run. Pico firmware does not include Wi-Fi or Bluetooth. Verify downloads against the SHA-256 shown on the release page.
+Follow up to three Agents with one pet. On the pet screen, move the joystick left or right to switch Agents and up or down to browse session bubbles.
+
+Cursor supports independent following and hold-to-dictate input with SW1. This release also improves task bubbles when switching back to WorkBuddy, consecutive turns in MiMo Desktop and the completion state after a Devin reply.
+
+See the [0.1.265 release notes](https://github.com/ai-maker-lab/HachimoDock/releases/tag/v0.1.265). Both installers include R313 OTA firmware for WiFi6 and Pico boards with v1 and v3 chips. Devices already running the matching R313 image only need the desktop update. After Wi-Fi pairing, the device can disconnect from the computer's USB data connection; it still needs power, and desktop-assisted features still require the client to run. Pico firmware does not include Wi-Fi or Bluetooth. Verify downloads against the SHA-256 shown on the release page.
 
 Complete flashing kits are for first installation or factory recovery and erase settings, appearances and components. Match both board model and chip revision; WiFi6 and Pico, and v1 and v3, are not interchangeable. For routine upgrades, use the built-in OTA updater.
 
@@ -26,14 +30,14 @@ Prebuilt installers support Apple silicon Macs and Windows x64. The Mac package 
 
 ### Complete flashing kits
 
-**For your first flash, we recommend using an AI tool such as ChatGPT or WorkBuddy to guide you.** Download and unzip the kit for your board, share its `FLASH.md` with the tool, and tell it your operating system and board model. For example, ask “Can you help me check that this kit matches my connected board, walk me through the first flash, and verify the result?”
+**For your first flash, we recommend using an AI tool such as ChatGPT or WorkBuddy to guide you.** Download and unzip the kit for your board, share its `README-FLASHING-CN.md` with the tool, and tell it your operating system and board model. For example, ask “Can you help me check that this kit matches my connected board, walk me through the first flash, and verify the result?”
 
-| Board | Chip revision | R292 factory kit |
+| Board | Chip revision | R313 factory kit |
 | --- | --- | --- |
-| WiFi6 | v1 | [Download WiFi6 v1](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_wifi6-v1_FULL-FACTORY.zip) |
-| WiFi6 | v3 | [Download WiFi6 v3](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_wifi6-v3_FULL-FACTORY.zip) |
-| Pico | v1 | [Download Pico v1](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_pico-v1_FULL-FACTORY.zip) |
-| Pico | v3 | [Download Pico v3](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_pico-v3_FULL-FACTORY.zip) |
+| WiFi6 | v1 | [Download WiFi6 v1](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.265/HachimiDock_0.1.265_wifi6-v1_FULL-FACTORY.zip) |
+| WiFi6 | v3 | [Download WiFi6 v3](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.265/HachimiDock_0.1.265_wifi6-v3_FULL-FACTORY.zip) |
+| Pico | v1 | [Download Pico v1](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.265/HachimiDock_0.1.265_pico-v1_FULL-FACTORY.zip) |
+| Pico | v3 | [Download Pico v3](https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.265/HachimiDock_0.1.265_pico-v3_FULL-FACTORY.zip) |
 
 ## What you can do
 
@@ -41,7 +45,7 @@ Prebuilt installers support Apple silicon Macs and Windows x64. The Mac package 
 
 Pet animations and task bubbles show thinking, working, waiting, completion and errors. Choose the Agent or session you want to follow and keep its progress visible beside your main screen.
 
-Integrations include **ChatGPT (Codex), Claude, OpenClaw, MiMo Desktop / MiMoCode, WorkBuddy, DeepSeek Harness, Prism and ZCode**. Available events and controls vary by integration: status reporting, dictation, sending and switching desktop conversations are separate capabilities.
+Integrations include **ChatGPT (Codex), Claude, OpenClaw, MiMo Desktop / MiMoCode, WorkBuddy, DeepSeek Harness, Prism, ZCode, Cursor and Devin**. Available events and controls vary by integration: status reporting, dictation, sending and switching desktop conversations are separate capabilities.
 
 WorkBuddy and DeepSeek Harness can show the current session title and task state. Over USB or Wi-Fi, task bubbles use MiSans Medium at 32 px for titles and 24 px for body text.
 
@@ -106,7 +110,8 @@ For a new, unflashed board, follow the [complete flashing kit guide](#complete-f
 | SW2 long press | Start or end real-time conversation |
 | SW3 short press | Back or cancel |
 | SW3 long press | Open device settings |
-| Joystick directions | Select sessions/components or use component controls |
+| Joystick left or right | Switch followed Agents on the pet screen and keep the same appearance, personality and voice |
+| Joystick up or down | Browse the current Agent’s session bubbles on the pet screen |
 
 Saved mappings take priority over these defaults. For Agent input on macOS, allow the client under **System Settings → Privacy & Security → Accessibility**. If installation is blocked, verify the download source and checksum, then follow the operating system's security prompts; do not disable Gatekeeper for an unknown app.
 
@@ -127,7 +132,9 @@ Factory kits include the bootloader, application, appearances, components and to
 
 ## Hardware and displays
 
-The original display is currently out of stock. Community contributor fosen provides an [alternative 2.8-inch touch-display adapter project](https://oshwhub.com/fosen/project_tzekpmhv), including adapter design, a matching enclosure model, HD28091C40-V1 mechanical drawings and display initialization data. Use its matching panel, adapter, cable, enclosure and configuration. The replacement panel has not yet been tested with this project’s firmware; the same diagonal size does not establish drop-in compatibility.
+When the original display is unavailable, choose the touch or non-touch panel listed in the hardware project. Each panel has its own 3MF enclosure file. Select the panel first, then download its matching model. [Replacement displays, adapter board and 3MF files](https://oshwhub.com/team_dklrqqse/project_zzmhvogr)
+
+The adapter connects to the ESP32-P4 MIPI-DSI port and includes a fixed-brightness backlight driver and a six-pin touch connector. Use a **22-pin, 0.5 mm pitch FPC cable with contacts on opposite sides** between the main board and the adapter. With power disconnected, connect the main board to J0101 and the display to J0102.
 
 The paired hardware uses ESP32-P4, 32 MiB Flash, 32 MiB PSRAM and a 480×640 MIPI-DSI panel. Components use a rotated 640×480 logical canvas. Connect the display to **DSI**, not CSI, with power disconnected. Consult the [hardware project](https://oshwhub.com/eda_gqvzlprk/project_cnbmkbjc#3-%E7%A1%AC%E4%BB%B6%E5%A4%8D%E5%88%BB) before substituting parts.
 
@@ -140,7 +147,7 @@ The paired hardware uses ESP32-P4, 32 MiB Flash, 32 MiB PSRAM and a 480×640 MIP
 
 ### Source and release provenance
 
-The `main` branch and `v0.1.245` tag provide the public 0.1.245 / R292 source. The [release metadata](latest-release.json) lists SHA-256 digests for installers and firmware.
+The [v0.1.265](https://github.com/ai-maker-lab/HachimoDock/tree/v0.1.265) tag provides the public 0.1.265 / R313 source. The [release metadata](latest-release.json) lists SHA-256 digests for installers and firmware.
 
 Resources are stored in ordinary Git; Git LFS is not required. Preserve dependency locks and choose the correct target configuration. Published binaries retain their original build contents even when `main` changes.
 
@@ -179,4 +186,4 @@ We also thank everyone who contributed development, testing, feedback and commun
 
 Home-control capabilities integrate [Xiaomi MiLoCo](https://github.com/XiaoMi/xiaomi-miloco), whose relevant works are copyrighted by Xiaomi and governed by the [Xiaomi Miloco License](licenses/Xiaomi-Miloco-LICENSE.md). This project grants no additional commercial, sublicensing or trademark rights.
 
-For project contact, see [作者 / Author](README.md#作者--author). Report bugs through Issues with versions and reproduction steps, with personal data removed. Report security issues privately under [SECURITY.md](SECURITY.md).
+For project inquiries, see the [author’s contact email](README.md#作者--author). For bug reports, use [GitHub Issues](https://github.com/ai-maker-lab/HachimoDock/issues). Include versions and reproduction steps when reporting a bug, and remove personal data before posting. Report security issues privately under [SECURITY.md](SECURITY.md).

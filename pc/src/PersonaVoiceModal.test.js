@@ -1,8 +1,7 @@
 /**
  * [Input] PersonaVoiceModal source and shared stylesheet.
- * [Output] Static coverage for the 人设与声音 modal: persona fields with templates, a per-appearance
- *          TTS provider select with provider-aware voice pickers (Doubao catalog, DashScope presets,
- *          DeepSeek presets, MiMo/custom free text), v1→v2 provider migration, validation, required (post-creation) mode,
+ * [Output] Static coverage for the 人设与声音 modal: persona fields with templates, provider-scoped
+ *          voice picker with cloned-speaker override, validation, required (post-creation) mode,
  *          factory reset for the built-in Terrier, and the preview gate.
  * [Pos] test node in ref/src
  * [Sync] If this file changes, update `ref/src/.folder.md`.
@@ -27,8 +26,8 @@ test("modal edits persona fields and applies templates", () => {
   assert.match(source, /applyTemplate\(template\)/);
 });
 
-test("voice section keeps the Doubao catalog with cloned speaker override, speed and volume", () => {
-  assert.match(source, /豆包 Seed TTS 2\.0/);
+test("Doubao retains the catalog, clone, speed and shared volume controls", () => {
+  assert.match(source, /service\?\.provider === "volcengine"/);
   assert.match(source, /DOUBAO_SPEAKERS/);
   assert.match(source, /updateVoice\("clone_speaker_id"/);
   assert.match(source, /updateVoice\("speed"/);

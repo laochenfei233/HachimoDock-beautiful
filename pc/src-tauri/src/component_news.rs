@@ -566,9 +566,9 @@ pub(crate) fn prepare_audio(board:&str){
         reusable(s,now).then(||(id.clone(),speech_items(&s.items,s.started)))
     }).collect();
     for(id,items)in batches{
-        // 引擎不可克隆：每个批次单独解析一次 setup（WARM 守卫保证实际只有首个批次会启动合成线程）。
-        let Ok(setup)=crate::component_voice::preparation_config(board)else{return;};
-        crate::component_audio::prepare_news_voice(&id,board,setup,items);
+        // 引擎不可克隆：每个批次单独解析一次配置（WARM 守卫保证实际只有首个批次会启动合成线程）。
+        let Ok(cfg)=crate::component_voice::preparation_config(board)else{return;};
+        crate::component_audio::prepare_news_voice(&id,board,cfg,items);
     }
 }
 fn speech_items(items:&[Item],at:i64)->Vec<crate::component_audio::SpeechItem>{

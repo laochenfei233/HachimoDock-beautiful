@@ -505,43 +505,6 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
                   {errors.speaker && <span className="ui-field__error">{errors.speaker}</span>}
                 </label>
               )}
-              <div className="persona-voice-modal__row">
-                <label className="ui-field">
-                  <span className="ui-field__label">搜索音色 · 共 {DOUBAO_SPEAKERS.length} 种</span>
-                  <input className="field-input" type="search" value={speakerQuery}
-                    onChange={(event) => setSpeakerQuery(event.target.value)}
-                    placeholder="搜索名称、语言或音色 ID" disabled={saving} />
-                </label>
-                <label className="ui-field">
-                  <span className="ui-field__label">音色</span>
-                  <select
-                    className="field-input"
-                    value={form.voice.speaker}
-                    onChange={(event) => updateVoice("speaker", event.target.value)}
-                    disabled={saving}
-                  >
-                    {speakerGroups.map(([language, speakers]) => (
-                      <optgroup key={language} label={language}>
-                        {speakers.map((speaker) => <option key={speaker.id} value={speaker.id}>{speaker.label}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
-                  {speakerQuery.trim() && speakerOptions.every((speaker) => speaker.language === "当前音色") && (
-                    <span className="muted small">未找到匹配音色，已保留当前选择。</span>
-                  )}
-                  {errors.speaker && <span className="ui-field__error">{errors.speaker}</span>}
-                </label>
-                <label className="ui-field">
-                  <span className="ui-field__label">复刻音色 ID（可选，填了优先）</span>
-                  <input
-                    className="field-input"
-                    value={form.voice.clone_speaker_id}
-                    onChange={(event) => updateVoice("clone_speaker_id", event.target.value)}
-                    placeholder="火山控制台声音复刻页申请所得，形如 S_xxxx"
-                    disabled={saving}
-                  />
-                </label>
-              </>}
               {errors.tts_overrides && <span className="ui-field__error">{errors.tts_overrides}</span>}
               <div className="persona-voice-modal__row">
                 <label className="ui-field">

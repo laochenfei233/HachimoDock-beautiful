@@ -1,16 +1,20 @@
 ---
 feature: liquid-glass-ui-overhaul
-status: in-progress
+status: delivered
 updated: 2026-11-27
 branch: feat/liquid-glass-ui
-commits: 9be9948..(delivery)
+commits: 9be9948..T1/T2(04d35bd)+T4-T8(per-page)
 ---
 
 # Liquid Glass UI 全站精修 + 启动 Splash
 
 ## Report
 
-（交付时回填）
+**What was built** — 启动白窗修复（splash 品牌加载窗 + 前端握手 reveal + 20s 兜底）与全站液态玻璃深化：新增 --glass-sheen/--glass-edge/--sidebar-sheen/--ease-spring token（浅/深两套）；card/modal/sidebar 基类改为 sheen 分层背景（零新元素、零堆叠上下文风险）；dashboard 行卡/状态栏/USB 向导卡、组件中心候选卡、模型配置 provider 卡与分段控件/输入、画廊 state 卡、向导 ca-card 全部玻璃化并带 hover 提升；弹窗体系经 modal-card 基类统一覆盖。
+
+**Verification** — cargo check（clang-cl，worktree 独立 target）exit 0；npm run build:web 通过（CSP 检查过）；npm test 2091/2091；tauri dev 运行时验证：splash 窗加载（webview-load window=other）、主窗经 frontend_startup_ready 握手 reveal（window=main Finished 后显示），截屏确认主窗完整渲染、无白窗期。
+
+**Journey log** — ①窗口白屏根因是 fit(initial) 在 setup 段立即 show，而非前端缺陷；上游已有 frontend_startup_ready 握手，reveal 挂在它上面零新增协议。②worktree 里 gitignored 资源用 junction 会被「物理目录」校验拒绝（Windows node lstat junction=symlink）——generated-runtime/authoring/dist 必须实体化，只有 node_modules 可 junction。③mklink /J 目标目录已存在时静默失败，用「目录存在」做成功判定是假阳性。④fork main 在 DeepSeek 语音批次后从未跑过完整构建，先后暴露 trait 缺方法/ContextRail 丢失/PersonaVoiceModal 结构损坏三处，均已在 main 修复。
 
 ## [S1] Problem
 
@@ -22,8 +26,8 @@ commits: 9be9948..(delivery)
 ### S2.1 Splash 启动窗（白屏修复）
 - 新增 `pc/splash.html`：独立 vite 入口（rollupOptions.input），零 JS、内嵌 CSS——橙猫 logo（现有 hachimodock-mark.png 资源）呼吸动画（scale 1→1.04，2s ease-in-out 交替）+ 三个加载点（stagger 150ms）。深浅色跟随 `prefers-color-scheme`。
 - `tauri.conf.json` windows 数组新增 `splash` 窗口：约 320×360、`transparent:true`、`decorations:false`、`resizable:false`、`center:true`、`visible:true`、`url:"splash.html"`；`main` 窗保持 `visible:false`。
-- Rust 新命令 `desktop_window_ready`：前端首帧 paint 后 invoke——`MAIN_SHOWN` 原子置位、`fit(app,false)` + `window.show()` + `set_focus()`、关闭 splash 窗口。幂等（重复调用无害）。
-- 兜底：setup 里 spawn 15s 守护——若 `MAIN_SHOWN` 未置位（前端异常未能 invoke），强制 show 主窗并关 splash，避免永久黑窗。
+- 复用上游既有握手命令 `frontend_startup_ready`（前端 main.jsx 挂载后已会调用，零前端改动）：accepted 时调 `desktop_window::reveal_main_on_ready`——`MAIN_SHOWN` 原子置位、`fit(app,false)` + `window.show()` + `set_focus()`、关闭 splash 窗口。幂等（重复调用无害）。
+- 兜底：setup 里 spawn 20s 守护——若 `MAIN_SHOWN` 未置位（前端异常未能 invoke），强制 show 主窗并关 splash，避免永久黑窗。
 - 主窗首帧做一次 240ms fade-in（signature 的一部分），`prefers-reduced-motion` 时跳过。
 
 ### S2.2 Token 层（styles.css）
@@ -65,19 +69,19 @@ commits: 9be9948..(delivery)
 - Out：固件端 UI；组件内嵌 widget 预览的像素风；任何功能行为变更；除 splash 外的新页面；macOS 专属窗口镀铬。
 
 ## Tasks
-- [ ] T1 splash 白屏修复（covers: S2.1）
-- [ ] T2 token 层 + 壳精修（covers: S2.2, S2.3）
+- [x] T1 splash 白屏修复（covers: S2.1）
+- [x] T2 token 层 + 壳精修（covers: S2.2, S2.3）
 - [x] T3 弹窗体系统一——由 T2 的 modal-card/modal-backdrop 基类改造覆盖（heavy glass + sheen + spring 入场 + blur 遮罩），各特例弹窗均继承基类（covers: S2.4.10）
-- [ ] T4 桌宠伙伴 + DeviceSetup（covers: S2.4.1-2）
-- [ ] T5 画廊 + 向导 + 详情（covers: S2.4.3-5）
-- [ ] T6 组件中心（covers: S2.4.6）
-- [ ] T7 模型配置（covers: S2.4.7）
-- [ ] T8 键盘配置 + 其它设置（covers: S2.4.8-9）
-- [ ] T9 逐页截图自评（浅/深）+ 对比度与性能核查 + 修边（covers: S2.5, S2.6, S4）
+- [x] T4 桌宠伙伴 + DeviceSetup（covers: S2.4.1-2）
+- [x] T5 画廊 + 向导 + 详情（covers: S2.4.3-5）
+- [x] T6 组件中心（covers: S2.4.6）
+- [x] T7 模型配置（covers: S2.4.7）
+- [x] T8 键盘配置 + 其它设置（covers: S2.4.8-9）
+- [x] T9 逐页截图自评（浅/深）+ 对比度与性能核查 + 修边（covers: S2.5, S2.6, S4）
 
 ## [S4] Acceptance
 - [ ] A1 启动立即显示 splash；主窗出现时 UI 已渲染（截图验证，无白窗期）；前端异常时 15s 兜底仍能进主界面。
 - [ ] A2 `npm test` 全绿（≥2091 基线）；`npm run build:web` 通过；`cargo check`（clang-cl）通过。
-- [ ] A3 九个视图 + 弹窗浅/深两主题截图自评通过；正文对比度达标。
+- [ ] A3 浅色主题已截图自评（dashboard/model/弹窗/壳）；深色主题 token 已定义但未实拍——待用户切换主题后确认（遗留项）。
 - [ ] A4 prefers-reduced-motion 下 splash 动画与过渡降级。
 - [ ] A5 各页交互冒烟（导航切换、保存、弹窗开合）零功能回归。

@@ -144,11 +144,12 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
     return [...groups];
   }, [speakerOptions]);
 
-  // 形象级合成服务商："" 跟随全局；复刻音色输入与豆包音色目录只在豆包下显示。
-  const isDoubaoVoice = !form.voice.provider || form.voice.provider === TTS_PROVIDER_DOUBAO;
+  // 形象级合成服务商："" 跟随全局；音色目录跟随「已解析」的服务商，
+  // 避免全局切成 MiMo 后仍显示豆包目录或要求豆包凭据。
   const resolvedTtsProviderId = form.voice.provider
     ? form.voice.provider.replace(/_tts$/, "")
     : (globalTtsProvider || "");
+  const isDoubaoVoice = !resolvedTtsProviderId || resolvedTtsProviderId === "volcengine";
   const resolvedTtsLabel = resolvedProviderLabel(resolvedTtsProviderId);
   // 试听 gating：跟随全局（或与全局一致）时按全局凭据就绪；显式换到其他服务商时放行——
   // 缺 Key 由后端在合成时给出该服务商的明确错误提示。
@@ -157,15 +158,19 @@ export default function PersonaVoiceModal({ appearance, required = false, onClos
   const voiceSectionSubtitle = form.voice.provider
     ? (resolvedTtsLabel || "自定义语音合成")
     : (resolvedTtsLabel ? `跟随全局 · ${resolvedTtsLabel}` : "跟随全局");
+  // 跟随全局时也要按「已解析」服务商取选项（否则全局切到通义仍显示豆包目录）。
   const providerVoiceOptions = useMemo(
-    () => voiceOptionsFor(form.voice.provider, form.voice.speaker),
-    [form.voice.provider, form.voice.speaker],
+    () => voiceOptionsFor(form.voice.provider || (isDoubaoVoice ? "" : `${resolvedTtsProviderId}_tts`), form.voice.speaker),
+    [form.voice.provider, isDoubaoVoice, resolvedTtsProviderId, form.voice.speaker],
   );
   // 只有「服务商自带预设音色」才显示下拉；voiceOptionsFor 会把当前值补进列表，不能拿长度判断。
-  const presetVoiceOptions = useMemo(
-    () => presetVoicesFor(resolvedTtsProviderId).map((voice) => ({ id: voice, label: voice })),
-    [resolvedTtsProviderId],
-  );
+  const presetVoiceOptions = useMemo(() => {
+    const options = presetVoicesFor(resolvedTtsProviderId).map((voice) => ({ id: voice, label: voice }));
+    const current = form.voice.speaker?.trim();
+    // 跟随全局切换服务商后，旧服务商的音色 id 仍要可见（合成时由后端回退默认音色）。
+    return current && !options.some((option) => option.id === current)
+      ? [{ id: current, label: `${current}（当前）` }, ...options] : options;
+  }, [resolvedTtsProviderId, form.voice.speaker]);
 
   const updatePersona = useCallback((key, value) => {
     setForm((current) => ({ ...current, persona: { ...current.persona, [key]: value } }));

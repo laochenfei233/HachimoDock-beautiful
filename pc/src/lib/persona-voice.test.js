@@ -36,7 +36,7 @@ test("built-in Terrier ships Peiqi 2.0 without changing the general voice defaul
   assert.equal(factory.configured, true);
   assert.equal(factory.persona.display_name, "小西");
   assert.match(factory.persona.greeting, /汪/);
-  assert.equal(factory.voice.provider, TTS_PROVIDER_DOUBAO);
+  assert.equal(factory.voice.provider, "", "the built-in follows the global synthesizer; Peiqi only applies under Doubao");
   assert.equal(factory.voice.speaker, "zh_female_peiqi_uranus_bigtts");
   assert.equal(BUILTIN_TERRIER_PERSONA_VOICE.voice.speaker, factory.voice.speaker);
   assert.equal(personaSummaryLabel(factory), "小西");

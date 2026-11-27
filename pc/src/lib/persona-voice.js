@@ -106,7 +106,8 @@ export const PERSONA_TEMPLATES = Object.freeze([
   },
 ]);
 
-/** 内置「西高地小狗」的出厂人设与佩奇猪 2.0 音色；不改变其他形象默认值。 */
+/** 内置「西高地小狗」的出厂人设与佩奇猪 2.0 音色；不改变其他形象默认值。
+ *  合成服务商跟随全局：佩奇音色只在全局是豆包时生效，全局为其他服务商时由后端回退其默认音色。 */
 export const BUILTIN_TERRIER_PERSONA_VOICE = Object.freeze({
   persona: Object.freeze({
     schema_version: PERSONA_VOICE_SCHEMA_VERSION,
@@ -120,7 +121,8 @@ export const BUILTIN_TERRIER_PERSONA_VOICE = Object.freeze({
     source: "builtin",
   }),
   voice: Object.freeze({
-    provider: TTS_PROVIDER_DOUBAO,
+    // 跟随全局（空串）：旧文档里被写死的 doubao_tts 不是用户选择，不能借此把形象钉在豆包上。
+    provider: "",
     speaker: "zh_female_peiqi_uranus_bigtts",
     clone_speaker_id: "",
     speed: 1.05,

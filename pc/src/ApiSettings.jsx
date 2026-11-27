@@ -18,7 +18,6 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import AppUpdateCard from "./AppUpdateCard.jsx";
 import { formatModelIssue } from "./lib/model-issue.js";
 import PageShell from "./shell/PageShell.jsx";
 import Card from "./shell/Card.jsx";
@@ -1318,10 +1317,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
         </div>
       </Card>
 
-      <Card title="其他配置" subtitle="界面外观与应用更新；这些设置不涉及服务凭据。">
-        <AppearanceCard embedded />
-        <AppUpdateCard active={active} embedded />
-      </Card>
+      <AppearanceCard />
     </PageShell>
     </div>
   );

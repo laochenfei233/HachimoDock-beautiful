@@ -18,6 +18,7 @@ import {
   Keyboard,
   Settings,
   Home,
+  PackageOpen,
 } from "lucide-react";
 import DeviceSetup from "./DeviceSetup";
 import DeviceDashboard from "./DeviceDashboard";
@@ -30,6 +31,7 @@ const AppearanceDetail = lazy(() => import("./AppearanceDetail"));
 const ComponentCenter = lazy(() => import("./ComponentCenter"));
 import ComponentCenterBoundary from "./component-center/ComponentCenterBoundary.jsx";
 const ApiSettings = lazy(() => import("./ApiSettings"));
+const AppUpdatePage = lazy(() => import("./AppUpdatePage"));
 const DeviceSettings = lazy(() => import("./DeviceSettings.jsx"));
 const SmartHome = lazy(() => import("./SmartHome.jsx"));
 import { DeviceContextProvider, useDeviceContext } from "./shell/DeviceContext.jsx";
@@ -168,6 +170,7 @@ export default function App() {
   const galleryViews = new Set(["gallery", "wizard", "detail"]);
   const activeTab = view === "api"
     ? "api"
+    : view === "update" ? "update"
     : view === "keyboard" ? "keyboard" : view === "settings" ? "settings" : view === "home" ? "home" : view === "components"
       ? "components"
       : galleryViews.has(view)
@@ -374,6 +377,9 @@ function AppInner({
               <Settings size={16} /><span className="sidebar-nav-label">其它设置</span>
             </button>
             <FirmwareUpdateNavItem usb={usb} wifi={wifi} />
+            <button type="button" className={`sidebar-nav__item ${activeTab === "update" ? "is-active" : ""}`} aria-current={activeTab === "update" ? "page" : undefined} onClick={() => setView("update")} title="应用更新">
+              <PackageOpen size={16} /><span className="sidebar-nav-label">应用更新</span>
+            </button>
           </nav>
           {!activeBoardDeviceId && (
             <button type="button" className="sidebar-bind" onClick={() => setView("setup")}>
@@ -453,6 +459,7 @@ function AppInner({
               </div>
             )}
             {view === "home" && <SmartHome />}
+            {view === "update" && <AppUpdatePage active={view === "update"} />}
             {(settingsVisited || view === "settings") && <div hidden={view !== "settings"}><DeviceSettings usb={usb} wifi={wifi} active={view === "settings"}
               wirelessMaintenanceRequest={wirelessMaintenanceRequest} /></div>}
             </Suspense>

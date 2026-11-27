@@ -61,6 +61,8 @@ const reviewedNodeBinaries = new Set([
   '266dec4dce3a6cdcf5cdc38722a00cf5ae6a12cc51068d2a227655bbb75751ec', // darwin-arm64
   'e85cb6dd5f916a2aa0d05a5874dcf7c69b1ebd7a5347d7ff912bb4d9339f5e23', // darwin-x64
   'f5109dc868ec38703ad8f305e0aceece717cb60d4889873f434017af4e96cccb', // win-x64
+  // node-v26.13.1-win-arm64.zip (sha256 181ebe43… 与官方 SHASUMS256.txt 一致) 内的 node.exe
+  '00edc356a01d7fe586beebe7519bb1acdff9dd62064ce4cf12ff1ed4a8d1810e', // win-arm64
 ]);
 
 export function verifyNodeRuntime(binaryPath) {

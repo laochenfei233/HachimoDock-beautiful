@@ -20,7 +20,7 @@ concurrency:
 env:
   UPSTREAM_SETUP_URL: https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_Windows-x64-setup.exe
   UPSTREAM_DMG_URL: https://github.com/ai-maker-lab/HachimoDock/releases/download/v0.1.245/HachimiDock_0.1.245_macOS-arm64.dmg
-  NODE_VERSION: v26.7.0
+  NODE_VERSION: v26.13.1
   AUDIT_FFMPEG_WIN_X64: 18ac8e4c695148f3e2e20b6a24b3974a7b350b3a6dee1c8a018db5c2d1b3fc4f
   AUDIT_FFMPEG_MAC_ARM64: 89c2d30bc9145bb76bdf2a94312f58316cb66ebbf7cd608cf480e6d350cd4b75
   AUDIT_FFMPEG_SOURCE: 99b393871f64a2d860587bcf0f9bdbf68b28693100b51c9dfdf3f37b604896a9

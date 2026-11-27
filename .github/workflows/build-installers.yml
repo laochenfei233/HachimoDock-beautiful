@@ -79,6 +79,10 @@ jobs:
         working-directory: pc/src-tauri/bridge/packages/clawd-backend-service
         run: npm ci
 
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Prepare desktop resources (MSVC C2x for the WAMR checker)
         working-directory: pc
         env:
@@ -464,6 +468,10 @@ jobs:
       - name: Restore audited bridge production dependencies (locked)
         working-directory: pc/src-tauri/bridge/packages/clawd-backend-service
         run: npm ci
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Prepare desktop resources
         working-directory: pc

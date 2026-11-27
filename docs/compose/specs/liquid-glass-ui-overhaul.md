@@ -80,7 +80,7 @@ commits: 9be9948..T1/T2(04d35bd)+T4-T8(per-page)
 - [x] T9 逐页截图自评（浅/深）+ 对比度与性能核查 + 修边（covers: S2.5, S2.6, S4）
 
 ## [S4] Acceptance
-- [ ] A1 启动立即显示 splash；主窗出现时 UI 已渲染（截图验证，无白窗期）；前端异常时 15s 兜底仍能进主界面。
+- [ ] A1 启动立即显示 splash；主窗出现时 UI 已渲染（截图验证，无白窗期）；前端异常时 20s 兜底仍能进主界面。
 - [ ] A2 `npm test` 全绿（≥2091 基线）；`npm run build:web` 通过；`cargo check`（clang-cl）通过。
 - [ ] A3 浅色主题已截图自评（dashboard/model/弹窗/壳）；深色主题 token 已定义但未实拍——待用户切换主题后确认（遗留项）。
 - [ ] A4 prefers-reduced-motion 下 splash 动画与过渡降级。

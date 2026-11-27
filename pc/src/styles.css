@@ -129,6 +129,13 @@
   --border: var(--line);
 }
 
+/* 主窗 reveal（前端首帧就绪）后整页 240ms 淡入；reduced-motion 由全局降级覆盖。 */
+@keyframes app-reveal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+body.app-ready { animation: app-reveal-in 240ms var(--ease-standard); }
+
 /* Dark theme — lib/theme.js resolves "auto/light/dark" and sets data-theme.
    Token names stay identical so components inherit both palettes. */
 :root[data-theme="dark"] {
@@ -188,6 +195,9 @@
 @media (prefers-reduced-transparency: reduce) {
   :root {
     --sidebar-material: var(--bg);
+  --glass-sheen: none;
+  --glass-edge: none;
+  --sidebar-sheen: none;
     --card-material: var(--surface);
     --modal-material: var(--surface-elevated);
     --material-blur: 0px;
@@ -6255,6 +6265,7 @@ select:focus-visible {
 }
 
 .usb-setup-card {
+  /* backdrop-filter here traps position:fixed descendants — do not host modals inside this card. */
   width: min(100%, 560px);
   padding: 40px;
   border: 1px solid var(--line);
@@ -7889,6 +7900,7 @@ select:focus-visible {
 }
 
 .ca-card {
+  /* backdrop-filter here traps position:fixed descendants — do not host modals inside this card. */
   background: var(--glass-sheen), var(--modal-material);
   backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate));
   -webkit-backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate));

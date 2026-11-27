@@ -55,6 +55,7 @@ function Ready({children}) {
     // failed to load. Never leave its fixed overlay covering a working app.
     document.getElementById('startup-loading')?.remove();
     window.__PET_STARTUP__?.ready();
+    document.body.classList.add("app-ready");
     nativeStartup.confirm().then(accepted=>{
       if(accepted!==true)console.warn('[startup]','native_ready_stale');
     }).catch(()=>console.warn('[startup]','native_ready_unconfirmed'));

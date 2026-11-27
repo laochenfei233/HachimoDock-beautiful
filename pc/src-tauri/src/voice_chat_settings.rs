@@ -384,9 +384,11 @@ fn apply_llm_defaults(settings: &mut VoiceChatSettings) {
 }
 
 /// 豆包服务商的 Key 与 ASR 共用（存于 volcengine_asr 凭据库）；其他服务商取自己的 scope。
+/// 豆包另认环境变量配置，与 settings_status 的就绪语义保持一致。
 fn speech_key(settings: &VoiceChatSettings, provider: &str, base_url: &str) -> Option<String> {
     if provider == "volcengine" {
         crate::volcengine_asr::stored_volcengine_key(base_url)
+            .or_else(|| crate::volcengine_asr::environment_key_for_scope("volcengine", base_url))
     } else {
         settings.speech_api_keys.get(&speech_scope(provider, base_url))
             .map(|key| key.trim()).filter(|key| !key.is_empty()).map(str::to_owned)

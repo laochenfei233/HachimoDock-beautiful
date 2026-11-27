@@ -197,7 +197,6 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
     ttsTone: "muted",
     ttsMessage: "正在读取语音合成配置…",
   });
-  const asrKeySaved = asrProvider === "mimo" ? asrState.savedMimo : asrState.savedVolcengine;
   // 实时对话：服务预填默认模型并允许修改；豆包 Seed TTS 2.0 复用识别 Key。
   const [voiceChat, setVoiceChat] = useState({
     loading: true,
@@ -1162,9 +1161,9 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                       id={`api-settings-${provider.id}-key`}
                       className="ui-control api-settings__secret-input"
                       {...secretInputProps}
-                      value={draft.apiKey}
+                      value={config.apiKey}
                       onChange={(event) => updateProvider(provider.id, { apiKey: event.target.value })}
-                      placeholder={generationConfig({ ...draft, apiKey: "" }, saved).apiKey ? "已保存；留空保持原 Key" : "输入" + provider.label + " API Key"}
+                      placeholder={generationConfig({ ...config, apiKey: "" }, savedVideoConfigs[provider.id]).apiKey ? "已保存；留空保持原 Key" : "输入" + provider.label + " API Key"}
                     />
                   </label>
                   {isKling && <>
@@ -1184,7 +1183,7 @@ export default function ApiSettings({ onBack, configReadError = "", active = tru
                         className="ui-control api-settings__secret-input"
                         value={config.baseUrl}
                         onChange={event => updateProvider(provider.id, { baseUrl: event.target.value,
-                          ...(cleanEndpoint(event.target.value) !== cleanEndpoint(draft.baseUrl) ? { apiKey: "" } : {}) })}
+                          ...(cleanEndpoint(event.target.value) !== cleanEndpoint(config.baseUrl) ? { apiKey: "" } : {}) })}
                         placeholder="https://api.example.com"
                       />
                     </label>

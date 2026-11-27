@@ -13036,7 +13036,9 @@ fn frontend_startup_generation(window: tauri::WebviewWindow, supervisor: tauri::
 #[tauri::command]
 fn frontend_startup_ready(window: tauri::WebviewWindow, supervisor: tauri::State<'_,startup_supervision::Supervisor>, generation:u64, token:String) -> Result<bool,String> {
     if window.label()!="main" || token.len()>64 {return Err("startup confirmation invalid".into());}
-    Ok(supervisor.ready(generation,&token))
+    let accepted=supervisor.ready(generation,&token);
+    if accepted { desktop_window::reveal_main_on_ready(window.app_handle()); }
+    Ok(accepted)
 }
 
 pub fn run() {
@@ -13078,6 +13080,7 @@ pub fn run() {
                 // No auto-connect, no credential reads/migrations, no audio,
                 // no bridge and no persistent settings in the diagnostic app.
                 if let Some(window) = app.get_webview_window("main") { window.show()?; }
+                if let Some(splash) = app.get_webview_window("splash") { let _ = splash.close(); }
                 return Ok(());
             }
             let usb_transfer_log =
@@ -13120,6 +13123,14 @@ pub fn run() {
                 eprintln!("[desktop-tray] unavailable; keeping foreground close/exit behavior: {}",error);
             }
             desktop_window::fit(app.handle(),true);
+            {
+                // 兜底：前端握手异常未 reveal 时，20s 后强制进主界面并关 splash。
+                let handle=app.handle().clone();
+                std::thread::spawn(move||{
+                    std::thread::sleep(std::time::Duration::from_secs(20));
+                    desktop_window::reveal_main_on_ready(&handle);
+                });
+            }
             let bundled=app.path().resource_dir()?.join("builtin-clawpkgs");
             #[cfg(debug_assertions)]
             let bundled=if bundled.is_dir(){bundled}else{PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../builtin-clawpkgs")};

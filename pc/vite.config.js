@@ -13,7 +13,9 @@ import { componentUiMetadataPlugin } from "./scripts/component-ui-metadata.mjs";
 export default defineConfig({
   build: process.env.PET_MANAGER_COMPOSER_DIAGNOSTIC === "1" ? {
     rollupOptions: { input: { diagnostic: "composer-diagnostic.html" } },
-  } : {},
+  } : {
+    rollupOptions: { input: { main: "index.html", splash: "splash.html" } },
+  },
   server: {host: "127.0.0.1", proxy: {'/community/':'http://127.0.0.1:4300'}},
   plugins: [componentUiMetadataPlugin(), wasmPreviewFontPlugin(), react()],
 });

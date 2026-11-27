@@ -13,7 +13,20 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 static REASONS:Mutex<Vec<String>>=Mutex::new(Vec::new());
 static PROMPT:AtomicBool=AtomicBool::new(false);
 static APPROVED:AtomicBool=AtomicBool::new(false);
+static MAIN_SHOWN:AtomicBool=AtomicBool::new(false);
 const TRAY_ID:&str="hachimidock-background";
+
+/// 前端首帧就绪后由 WebView 调用：显示主窗并关闭 splash 加载窗，
+/// 消除「窗口先于内容出现」的启动白窗。幂等；15s 兜底定时器会兜底同一逻辑。
+pub fn reveal_main_on_ready(app:&AppHandle){
+    if MAIN_SHOWN.swap(true,Ordering::SeqCst){return;}
+    fit(app,false);
+    if let Some(window)=app.get_webview_window("main"){
+        let _=window.show();
+        let _=window.set_focus();
+    }
+    if let Some(splash)=app.get_webview_window("splash"){let _=splash.close();}
+}
 
 #[cfg(target_os = "macos")]
 pub fn guard_macos_system_quit(app: &AppHandle) -> Result<(), &'static str> {
@@ -183,7 +196,8 @@ pub fn fit(app:&AppHandle,initial:bool){
             let _=window.set_size(tauri::LogicalSize::new(size.0,size.1));
             if initial{let _=window.center();}
         }
-        if initial||visible{let _=window.show();}
+        // 首次 fit 不再显示窗口：显示时机交给 reveal_main_on_ready（前端首帧）。
+        if !initial && visible{let _=window.show();}
     }
 }
 #[cfg(test)]mod tests{use super::*;

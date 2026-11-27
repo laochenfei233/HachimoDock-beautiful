@@ -223,6 +223,18 @@ pub(super) fn validate_write(
     }
     Ok(())
 }
+/// Device NACK codes carry the real reason (codec missing, busy, persist failed).
+/// Surface them as definite failures instead of the generic "unknown result".
+fn device_error_message(code: &str) -> String {
+    match code {
+        "audio_unavailable" => "设备当前不可调节总音量（音频未就绪；基座无音频编解码器时属正常）".into(),
+        "volume_busy" => "设备音量正忙，请稍后重试".into(),
+        "volume_codec_failed" => "设备音频编解码器未就绪，无法调节音量".into(),
+        "volume_persist_failed" => "设备音量已调整，但保存在设备上失败".into(),
+        other => format!("设备拒绝调节音量：{other}"),
+    }
+}
+
 fn validate_response(
     response: &serde_json::Value,
     board: &str,
@@ -310,8 +322,20 @@ impl UsbSerialManager {
         };
         self.remove_device_response_waiter(&request, RESPONSE_TOPIC);
         let response = response?;
-        validate_response(&response, board, &request, volume)
-            .map_err(|e| format!("{UNKNOWN}: {e}"))?;
+        if response["ok"].as_bool() == Some(false) {
+            if let Some(code) = response["error"].as_str().filter(|code| !code.is_empty()) {
+                return Err(device_error_message(code));
+            }
+        }
+        if let Err(reason) = validate_response(&response, board, &request, volume) {
+            // 保留设备原始回执，便于区分固件过旧与协议不一致。
+            crate::realtime_chat_log::record("", "master_volume_receipt", serde_json::json!({
+                "ok": response["ok"], "engine": response["engine"], "boardDeviceId": response["boardDeviceId"],
+                "requestId": response["requestId"], "volume": response["volume"], "persisted": response["persisted"],
+                "reason": reason,
+            }));
+            return Err(format!("{UNKNOWN}: {reason}"));
+        }
         // The receipt can already be queued when disconnect/replacement wins.
         // Linearize success under the same owner gate as inbound dispatch.
         {

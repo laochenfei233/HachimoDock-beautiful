@@ -326,7 +326,7 @@ button,input,select,textarea {
 :root {
   --backdrop: rgb(38 38 38 / 38%);
   --dialog-shadow: 0 20px 68px rgb(38 38 38 / 20%), 0 3px 12px rgb(38 38 38 / 8%);
-  --editorial-heading: Georgia, "Songti SC", "SimSun", serif;
+  --editorial-heading: var(--font-sans);
 }
 .channel-row__follow-current {
   padding: 4px 11px;

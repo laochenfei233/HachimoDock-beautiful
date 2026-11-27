@@ -2,6 +2,8 @@ export const MASTER_VOLUME_ENGINE = 'p4-master-volume-v1';
 export const EMPTY_VOLUME_STATE = Object.freeze({value:null,draft:null,known:false,busy:false,loading:false,waitingForTransfer:false,persisted:false,error:'',available:false,reason:'请先连接设备'});
 const VOLUME_QUERY_RETRY_DELAYS = [250, 500, 1000, 2000, 3000, 4000, 5000, 5000, 5000, 5000];
 const TRANSFER_BUSY = 'device transfer busy; volume not submitted';
+// 后端明确 NACK（音频未就绪、编解码器缺失等）不是"结果未知"，不该提示重新读取。
+const UNKNOWN_RESULT = 'audio_volume_result_unknown_refresh_required';
 const percent = v => Number.isInteger(v) && v >= 0 && v <= 100;
 
 export function createDeviceVolumeController({invoke,onState=()=>{},wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}) {
@@ -38,9 +40,12 @@ export function createDeviceVolumeController({invoke,onState=()=>{},wait=ms=>new
       publish({value:reply.volume,draft:reply.volume,known:true,persisted:reply.persisted,persistState:reply.persistState||'',savePending:reply.savePending,error:''});
       return true;
     } catch(error) {
+      const detail=message(error);
       if (current(serial)) publish({known:false,value:null,persisted:false,error:setting
-        ? `设置结果尚未确认，请先读取设备音量；不会自动重复设置。${message(error)}`
-        : `读取设备音量失败：${message(error)}`});
+        ? (detail.includes(UNKNOWN_RESULT)
+          ? `设置结果尚未确认，请先读取设备音量；不会自动重复设置。${detail}`
+          : `设置失败：${detail}`)
+        : `读取设备音量失败：${detail}`});
       return false;
     } finally {
       if (current(serial)) publish({busy:false,loading:false,waitingForTransfer:false});

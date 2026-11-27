@@ -67,7 +67,7 @@ commits: 9be9948..(delivery)
 ## Tasks
 - [ ] T1 splash 白屏修复（covers: S2.1）
 - [ ] T2 token 层 + 壳精修（covers: S2.2, S2.3）
-- [ ] T3 弹窗体系统一（covers: S2.4.10）
+- [x] T3 弹窗体系统一——由 T2 的 modal-card/modal-backdrop 基类改造覆盖（heavy glass + sheen + spring 入场 + blur 遮罩），各特例弹窗均继承基类（covers: S2.4.10）
 - [ ] T4 桌宠伙伴 + DeviceSetup（covers: S2.4.1-2）
 - [ ] T5 画廊 + 向导 + 详情（covers: S2.4.3-5）
 - [ ] T6 组件中心（covers: S2.4.6）

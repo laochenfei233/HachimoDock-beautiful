@@ -9,7 +9,35 @@
 .smart-home .page-shell__body { display: grid; gap: 18px; }
 .smart-home button { cursor: pointer; }
 .smart-home button:disabled { cursor: not-allowed; opacity: .5; }
-.smart-home .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+/* 本页用的是上游的 .btn/.btn-primary 命名，设计系统只定义了 .button 系列；
+   之前 14 个按钮全是裸文本。 */
+.smart-home .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: var(--control-height-sm);
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--font-size-md);
+  line-height: 1;
+  transition: border-color var(--motion-fast) ease, background-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+.smart-home .btn:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-muted); }
+.smart-home .btn:active:not(:disabled) { transform: scale(0.98); }
+.smart-home .btn-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 2px 8px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.smart-home .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+.home-device .btn { justify-self: start; }
 .smart-home input:not([type=checkbox]), .smart-home select, .smart-home textarea { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); color: inherit; min-width: 0; font: inherit; }
 .smart-home input[type=checkbox] { accent-color: var(--accent); }
 .smart-home :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
